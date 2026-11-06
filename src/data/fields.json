@@ -1,1 +1,50 @@
-[]
+[
+  {
+    "id": "immuno",
+    "title": "당신은 면역학형!",
+    "subtitle": "몸을 지키는 전략가",
+    "description": "적을 기억하고 정확히 골라내는 능력을 즐겨 골랐어요. 면역학은 우리 몸이 병원체를 알아보고 물리치는 원리를 연구해요.",
+    "courses": ["면역학", "미생물학"],
+    "coursesVerified": false
+  },
+  {
+    "id": "cell",
+    "title": "당신은 세포생물학형!",
+    "subtitle": "세포 속 일꾼들의 감독",
+    "description": "세포가 직접 움직이고 신호를 주고받는 능력을 좋아했어요. 세포생물학은 세포가 어떻게 생기고, 일하고, 소통하는지 연구해요.",
+    "courses": ["세포생물학", "일반생물학"],
+    "coursesVerified": false
+  },
+  {
+    "id": "molecular",
+    "title": "당신은 분자생물학형!",
+    "subtitle": "DNA로 그물을 짜는 설계자",
+    "description": "DNA와 단백질로 싸우는 방식을 골랐어요. 분자생물학은 DNA, RNA, 단백질이 생명 현상을 어떻게 만드는지 연구해요.",
+    "courses": ["분자생물학", "생명정보학"],
+    "coursesVerified": false
+  },
+  {
+    "id": "biochem",
+    "title": "당신은 생화학형!",
+    "subtitle": "연쇄 반응의 연금술사",
+    "description": "단백질이 차례로 작동해 터지는 연쇄 반응을 즐겼어요. 생화학은 생명체 안에서 일어나는 화학 반응과 분자를 연구해요.",
+    "courses": ["생화학", "유기화학"],
+    "coursesVerified": false
+  },
+  {
+    "id": "genetics",
+    "title": "당신은 유전학형!",
+    "subtitle": "무한한 조합의 마법사",
+    "description": "유전자 조합으로 다양한 항체를 만드는 능력을 골랐어요. 유전학은 유전 정보가 어떻게 전달되고 다양해지는지 연구해요.",
+    "courses": ["유전학", "분자유전학"],
+    "coursesVerified": false
+  },
+  {
+    "id": "physio",
+    "title": "당신은 생리학형!",
+    "subtitle": "몸 전체를 조율하는 지휘자",
+    "description": "몸 전체의 상태를 바꿔 싸우는 방법을 택했어요. 생리학은 체온, 호흡, 순환처럼 몸이 균형을 유지하는 원리를 연구해요.",
+    "courses": ["인체생리학", "동물생리학"],
+    "coursesVerified": false
+  }
+]
