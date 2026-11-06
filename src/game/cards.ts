@@ -67,7 +67,7 @@ export function damageEnemy(w: World, i: number, amount: number, src: Source, fl
   const mem = cardLevel(w, 'memory');
   if (mem) mult += Math.min(mem.maxBonus, w.kills[e.kind[i]] * mem.bonusPerKill);
   e.hp[i] -= amount * mult;
-  if (flash) e.flash[i] = FLASH_TIME;
+  if (flash) { e.flash[i] = FLASH_TIME; w.fx.hit++; }
 }
 
 export function fireShot(w: World, kind: number, tx: number, ty: number, speed: number) {

@@ -62,7 +62,7 @@ export function updateSpawner(w: World, dt: number) {
     w.bossWarn = B.at - w.time;
     if (w.time >= B.at) {
       // maxEnemies와 상관없이 등장 (풀에 여유가 있다). 실패하면 다음 프레임에 다시.
-      const p = ring(w, S.distance * 0.8, S.distance * 0.8);
+      const p = ring(w, B.spawnDistance, B.spawnDistance);
       if (addEnemy(w, BOSS, p.x, p.y) < 0) return;
       w.boss.spawned = true;
       w.boss.maxHp = enemies[BOSS].hp;

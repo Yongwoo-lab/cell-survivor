@@ -156,7 +156,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   // 종류마다 InstancedMesh 묶음 (구균은 포도송이 모양 4가지)
   const kindMeshes = ENEMIES.map((d) => {
     const geos =
-      d.id === 'coccus' ? VARIANTS.map((k) => clusterGeometry(k, d.radius))
+      d.id === 'coccus' || d.id === 'resistantCoccus' ? VARIANTS.map((k) => clusterGeometry(k, d.radius))
       : d.id === 'bacillus' ? [bacillusGeometry(d.radius)]
       : d.id === 'virus' ? [virusGeometry(d.radius)]
       : d.id === 'superbug' ? [bossGeometry(d.radius)]
@@ -244,7 +244,11 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
         else q.setFromAxisAngle(look.axis, look.phase + t * look.spin * (kind === BOSS ? 0.3 : 1));
         s.setScalar(kind === BOSS ? 1 : look.scale);
         ms[v].setMatrixAt(j, m.compose(p, q, s));
-        ms[v].setColorAt(j, e.flash[i] > 0 ? flashColor : kindColors[kind]);
+        // 2페이즈 보스는 더 빨갛게 맥동하며 빛난다 (밝기 > 1 → bloom)
+        const col = e.flash[i] > 0 ? flashColor
+          : kind === BOSS && w.boss.phase2 ? tmpColor.copy(kindColors[kind]).multiplyScalar(2.4 + Math.sin(t * 9) * 0.9)
+          : kindColors[kind];
+        ms[v].setColorAt(j, col);
         if (e.mark[i] > 0) {
           q.setFromAxisAngle(UP, t * 3 + id);
           s.setScalar((def.radius / COCCUS.radius) * (1 + Math.sin(t * 10) * 0.08));

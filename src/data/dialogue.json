@@ -37,6 +37,13 @@
     "resultLevel": "레벨",
     "resultCards": "이번 판에 고른 카드",
     "resultCourses": "관련 과목",
-    "backToTitle": "Enter / R · 타이틀로"
+    "backToTitle": "Enter / R · 타이틀로",
+    "next": "Enter · 다음",
+    "ranking": "오늘의 랭킹",
+    "rankEmpty": "아직 기록이 없어요",
+    "enterName": "10위 안! 이름을 입력하세요 (영문 3글자 · Enter)",
+    "score": "점수",
+    "yourScore": "내 점수",
+    "muted": "음소거 · M"
   }
 }

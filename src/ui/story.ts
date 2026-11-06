@@ -3,6 +3,7 @@ import dialogue from '../data/dialogue.json';
 import enemies from '../data/enemies.json';
 import balance from '../data/balance.json';
 import type { World } from '../game/world';
+import { sfx } from '../audio';
 
 const ACT_SHOW = 2500, OFFICER_SHOW = 3000;
 const officerLines = dialogue.officer as Record<string, string>;
@@ -38,7 +39,7 @@ export function createStory() {
       lastAct = -1; seen = 0; queue.length = 0; busyUntil = 0;
       act.classList.remove('on'); officer.classList.remove('on'); warn.hidden = true;
     },
-    update(w: World) {
+    update(w: World, sound = true) {
       if (w.act !== lastAct) {
         lastAct = w.act;
         const a = dialogue.acts.find((x) => x.id === balance.acts[w.act].id)!;
@@ -56,8 +57,10 @@ export function createStory() {
         if (line) queue.push(line);
       }
       if (queue.length && performance.now() > busyUntil) showOfficer(queue.shift()!);
-      // 보스 경고 (경고음 자리: 사운드 작업 때 여기서 재생)
-      warn.hidden = !(w.bossWarn > 0);
+      // 보스 경고: 켜지는 순간 사이렌
+      const warnOn = w.bossWarn > 0;
+      if (warnOn && warn.hidden && sound) sfx.siren(w.bossWarn);
+      warn.hidden = !warnOn;
     },
   };
 }

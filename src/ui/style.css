@@ -101,10 +101,10 @@ body { font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
 /* 결과 카드: 세로형 9:16, 캡처용 */
 #result { position: fixed; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   background: rgba(2, 4, 12, 0.8); animation: fadein 0.5s both; }
-.rc { box-sizing: border-box; height: min(88vh, 860px); aspect-ratio: 9 / 16; padding: 5.5% 7%; display: flex; flex-direction: column; gap: 1.4vh;
+.rc { box-sizing: border-box; height: min(calc(100vh - 60px), 860px); aspect-ratio: 9 / 16; padding: 5.5% 7%; display: flex; flex-direction: column; gap: 1.4vh;
   border-radius: 22px; overflow: hidden; border: 1px solid rgba(120, 245, 235, 0.5);
   background: radial-gradient(circle at 50% 0%, rgba(63, 242, 230, 0.28), transparent 55%), linear-gradient(170deg, #07343a, #160c36 60%, #0a0618);
-  box-shadow: 0 0 50px rgba(63, 242, 230, 0.3); font-size: min(1.6vh, 15px); }
+  box-shadow: 0 0 50px rgba(63, 242, 230, 0.3); font-size: min(1.55vh, 15px); }
 #result.lost .rc { background: radial-gradient(circle at 50% 0%, rgba(176, 156, 255, 0.25), transparent 55%), linear-gradient(170deg, #1a1838, #160c36 60%, #0a0618); }
 .rc-top { font-size: 0.85em; letter-spacing: 0.2em; opacity: 0.7; text-transform: uppercase; }
 .rc h1 { margin: 0.4em 0 0; font-size: 2.3em; line-height: 1.2; color: #fff; text-shadow: 0 0 20px rgba(63, 242, 230, 0.7); }
@@ -118,11 +118,42 @@ body { font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
 .rc .stats b { display: block; font-size: 1.7em; color: #ffe08a; }
 .rc .stats span { font-size: 0.85em; opacity: 0.75; }
 .rc h3 { margin: 0.3em 0 0; font-size: 1em; color: #9ffff0; }
-.rc ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.6em; flex: 1; min-height: 0; overflow: hidden; }
-.rc li { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; }
-.rc li b { font-size: 1em; }
-.rc li i { font-style: normal; font-size: 0.85em; color: #ffe08a; align-self: center; }
-.rc li span { grid-column: 1 / -1; font-size: 0.85em; line-height: 1.4; opacity: 0.7;
+.rc .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.rc .chips span { padding: 0.25em 0.7em; border-radius: 99px; font-size: 0.9em; background: rgba(63, 242, 230, 0.12); border: 1px solid rgba(120, 245, 235, 0.4); white-space: nowrap; }
+.rc .chips i { font-style: normal; color: #ffe08a; font-size: 0.9em; }
+.rc ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.7em; flex: 1; min-height: 0; overflow: hidden; }
+.rc li b { display: block; font-size: 0.95em; color: #9ffff0; }
+.rc li span { font-size: 0.9em; line-height: 1.45; opacity: 0.8;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rc small { font-size: 0.75em; opacity: 0.55; line-height: 1.4; }
 #result .back { margin: 0; font-size: 14px; opacity: 0.7; animation: blink 1.4s ease-in-out infinite; }
+
+/* 오늘의 랭킹 */
+#ranking { position: fixed; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; background: rgba(2, 4, 12, 0.85); animation: fadein 0.4s both; }
+.rk { width: min(440px, 90vw); text-align: center; }
+.rk h2 { margin: 0 0 6px; font-size: 32px; color: #bffcff; text-shadow: 0 0 18px #3ff2e6; }
+.rk .mine { margin: 0 0 6px; opacity: 0.85; }
+.rk .mine b { color: #ffe08a; font-size: 1.3em; }
+.rk .prompt { margin: 6px 0 10px; color: #ffe08a; animation: blink 1.2s ease-in-out infinite; }
+.rk ol, #title aside ol { margin: 0; padding: 0; list-style: none; }
+.rk li, #title aside li { display: grid; grid-template-columns: 2.2em 1fr auto; align-items: center; padding: 6px 14px; border-bottom: 1px solid rgba(120, 245, 235, 0.15); }
+.rk li span, #title aside li span { opacity: 0.6; text-align: left; }
+.rk li b, #title aside li b { text-align: left; letter-spacing: 0.15em; }
+.rk li em, #title aside li em { font-style: normal; color: #ffe08a; }
+.rk li.me { background: rgba(63, 242, 230, 0.15); border-radius: 8px; box-shadow: 0 0 14px rgba(63, 242, 230, 0.35); }
+.rk li.entry b i { font-style: normal; display: inline-block; width: 1.1em; margin-right: 3px; border-bottom: 2px solid #3ff2e6; text-align: center; }
+.rk li.empty { display: block; opacity: 0.6; }
+.rk .back { margin-top: 16px; font-size: 14px; opacity: 0.7; animation: blink 1.4s ease-in-out infinite; }
+
+/* 타이틀 옆 랭킹 상위 5 */
+#title aside { position: absolute; right: 4vw; top: 50%; transform: translateY(-50%); width: 220px; padding: 12px 6px; font-size: 14px;
+  border-radius: 14px; background: rgba(4, 24, 30, 0.6); border: 1px solid rgba(120, 245, 235, 0.3); }
+#title aside h3 { margin: 0 0 6px; font-size: 13px; text-align: center; color: #9ffff0; letter-spacing: 0.1em; }
+#title aside li { padding: 4px 10px; }
+
+/* 자동 시연 안내 */
+#demo { position: fixed; top: 64px; left: 0; right: 0; z-index: 4; text-align: center; pointer-events: none; }
+#demo p { display: inline-block; margin: 0; padding: 8px 22px; border-radius: 99px; font-size: 20px; background: rgba(2, 8, 14, 0.6);
+  border: 1px solid rgba(120, 245, 235, 0.5); animation: blink 1.2s ease-in-out infinite; }
+
+#muted { position: fixed; right: 12px; bottom: 10px; font-size: 12px; opacity: 0.7; z-index: 7; }

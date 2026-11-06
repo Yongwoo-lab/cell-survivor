@@ -1,4 +1,6 @@
 import dialogue from '../data/dialogue.json';
+import balance from '../data/balance.json';
+import { topToday, rankRows } from './ranking';
 
 const TYPE_MS = 55; // 한 글자 간격
 const LINE_PAUSE = 500;
@@ -14,7 +16,10 @@ const el = (id: string, html = '') => {
 };
 
 export function createTitle() {
-  const title = el('title', `<h1>${dialogue.ui.title}</h1><p>${dialogue.ui.pressStart}</p>`);
+  const title = el('title', `<h1>${dialogue.ui.title}</h1><p>${dialogue.ui.pressStart}</p><aside><h3>${dialogue.ui.ranking}</h3><ol></ol></aside>`);
+  const side = title.querySelector<HTMLElement>('aside')!;
+  // 대기 화면 자동 시연 위에 깜빡이는 안내
+  const demo = el('demo', `<p>${dialogue.ui.pressStart}</p>`);
   const intro = el('intro', `<div class="lines"></div><div class="call">${dialogue.introCall}</div>`);
   const lines = intro.querySelector<HTMLElement>('.lines')!;
   const call = intro.querySelector<HTMLElement>('.call')!;
@@ -31,7 +36,14 @@ export function createTitle() {
   };
 
   return {
-    showTitle: (on: boolean) => { title.hidden = !on; },
+    showTitle(on: boolean) {
+      title.hidden = !on;
+      if (!on) return;
+      const top = topToday(balance.score.titleSize);
+      side.hidden = !top.length;
+      side.querySelector('ol')!.innerHTML = rankRows(top);
+    },
+    showDemo: (on: boolean) => { demo.hidden = !on; },
     // 인트로: 세 문장을 타자 치듯, 마지막에 introCall
     playIntro(onDone: () => void) {
       done = onDone;

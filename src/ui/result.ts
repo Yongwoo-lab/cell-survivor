@@ -29,6 +29,8 @@ export function createResult() {
         ending.hidden = true;
         const f = fields.find((x) => x.id === topField(w.result)) ?? fields[0];
         const picked = Object.entries(w.cards).map(([id, lv]) => ({ c: cards.find((c) => c.id === id)!, lv }));
+        // 분야를 대표하는 카드 2장(그 분야 → 단계 높은 순)만 science 문장을 보여 준다
+        const featured = [...picked].sort((a, b) => +(b.c.field === f.id) - +(a.c.field === f.id) || b.lv - a.lv).slice(0, 2);
         const kills = w.kills.reduce((a, b) => a + b, 0);
         card.className = w.won ? 'won' : 'lost';
         card.innerHTML = `<div class="rc">
@@ -43,10 +45,11 @@ export function createResult() {
             <div><b>${w.player.level}</b><span>${U.resultLevel}</span></div>
           </div>
           <h3>${U.resultCards}</h3>
-          <ul>${picked.map(({ c, lv }) => `<li><b>${c.name}</b><i>${lv}/${c.levels.length}</i><span>${c.science}</span></li>`).join('')}</ul>
+          <div class="chips">${picked.map(({ c, lv }) => `<span>${c.name} <i>${lv}/${c.levels.length}</i></span>`).join('')}</div>
+          <ul>${featured.map(({ c }) => `<li><b>${c.name}</b><span>${c.science}</span></li>`).join('')}</ul>
           <small>${dialogue.disclaimer}</small>
         </div>
-        <p class="back">${U.backToTitle}</p>`;
+        <p class="back">${U.next}</p>`;
         card.hidden = false;
         onCard();
       }, ENDING_SHOW);

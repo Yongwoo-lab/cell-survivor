@@ -10,7 +10,8 @@ import { type Card, cardLevel, updateCards, damageEnemy, drawCards, fireShot, ne
 const P = balance.player, S = balance.shot, X = balance.xp, L = balance.levelUp;
 export const ENEMIES = enemies;
 const VIRUS = kindOf('virus'), INFECTED = kindOf('infected');
-const C = balance.cells;
+const C = balance.cells, B = balance.boss;
+const MINION = kindOf(B.minionId);
 export const MAX_ENEMIES = 1024;
 
 export interface Vec2 { x: number; y: number }
@@ -26,7 +27,9 @@ export function createWorld() {
     cellsPlaced: false,
     act: 0,
     won: false,
-    boss: { spawned: false, hp: 0, maxHp: 0 },
+    boss: { spawned: false, hp: 0, maxHp: 0, phase2: false },
+    shotCount: 0,
+    fx: { shot: 0, hit: 0, pickup: 0, hurt: 0 }, // 이번 프레임 효과음용 횟수
     bossWarn: 0, // >0 이면 보스 등장까지 남은 초 (경고 연출)
     resist: {} as Record<string, number>, // 공격 종류 → 피해 감소율 (보스 내성)
     resistPopCd: 0,
@@ -61,6 +64,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
   w.bursts.length = 0;
   w.resistHits.length = 0;
   w.infections.length = 0;
+  w.fx.shot = w.fx.hit = w.fx.pickup = w.fx.hurt = 0;
   if (w.over || w.choosing) return;
   let dt = realDt;
   if (w.slowmo > 0) {
@@ -116,6 +120,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     }
     const dx = tx - e.x[i], dy = ty - e.y[i];
     const d = Math.hypot(dx, dy) || 1;
+    if (e.kind[i] === BOSS && d > S.range) mul *= B.catchUpMul; // 보스는 멀어지면 따라붙는다
     e.x[i] += (dx / d) * def.speed * mul * dt;
     e.y[i] += (dy / d) * def.speed * mul * dt;
     e.flash[i] -= dt;
@@ -156,8 +161,14 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
   // 기본 공격: 가장 가까운 적에게 자동 발사
   w.fireCd -= dt;
   if (w.fireCd <= 0) {
-    const [t] = nearestEnemies(w, 1);
+    let [t] = nearestEnemies(w, 1);
+    // 보스가 사거리 안이면 priorityEvery발 중 1발은 보스를 노린다
+    if (t !== undefined && ++w.shotCount % B.priorityEvery === 0) {
+      for (let i = 0; i < E.count; i++)
+        if (e.kind[i] === BOSS && (e.x[i] - pl.x) ** 2 + (e.y[i] - pl.y) ** 2 < S.range ** 2) t = i;
+    }
     if (t !== undefined) {
+      w.fx.shot++;
       fireShot(w, 0, e.x[t], e.y[t], S.speed);
       w.fireCd = S.interval / atkMul(w);
     }
@@ -192,6 +203,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
       if (e.hp[i] <= 0 || (e.x[i] - pl.x) ** 2 + (e.y[i] - pl.y) ** 2 > r * r) return;
       pl.hp = Math.max(0, pl.hp - def.damage);
       pl.invuln = P.invulnTime;
+      w.fx.hurt++;
       return true;
     });
     if (pl.hp <= 0) w.over = true;
@@ -214,10 +226,20 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
 
   // 보스 체력 (화면 표시용), 보스를 잡으면 승리
   if (w.boss.spawned) {
-    let hp = 0;
-    for (let i = 0; i < E.count; i++) if (e.kind[i] === BOSS) hp = e.hp[i];
+    let hp = 0, bi = -1;
+    for (let i = 0; i < E.count; i++) if (e.kind[i] === BOSS) { hp = e.hp[i]; bi = i; }
     w.boss.hp = hp;
     if (hp <= 0) w.won = w.over = true;
+    // 2페이즈: 체력이 절반 아래로 → 주변에 내성균 소환 (한 번만)
+    else if (!w.boss.phase2 && hp < w.boss.maxHp * B.phase2At) {
+      w.boss.phase2 = true;
+      const bx = e.x[bi], by = e.y[bi];
+      for (let k = 0; k < B.minionCount; k++) {
+        const a = (k / B.minionCount) * Math.PI * 2;
+        addEnemy(w, MINION, bx + Math.cos(a) * B.minionRing, by + Math.sin(a) * B.minionRing);
+      }
+      w.bursts.push({ x: bx, y: by, r: B.minionRing * 1.6 });
+    }
   }
 
   // 항원 조각: 가까우면 자석처럼 끌려와 흡수
@@ -227,6 +249,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     const d = Math.hypot(dx, dy);
     if (d < P.pickupRadius) {
       pl.xp += g.xp[i];
+      w.fx.pickup++;
       G.remove(i);
       continue;
     }

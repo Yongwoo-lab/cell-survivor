@@ -106,7 +106,14 @@
     "at": 150,
     "warning": 4,
     "resistPopupThreshold": 0.15,
-    "resistPopupInterval": 0.25
+    "resistPopupInterval": 0.25,
+    "priorityEvery": 3,
+    "phase2At": 0.5,
+    "minionId": "resistantCoccus",
+    "minionCount": 6,
+    "minionRing": 2.5,
+    "spawnDistance": 15,
+    "catchUpMul": 2.5
   },
   "levelUp": {
     "slowmoTime": 0.3,
@@ -121,5 +128,16 @@
     "nkHomeRadius": 1.8,
     "antibodyShotSpeed": 14,
     "complementSplashRatio": 0.6
+  },
+  "score": {
+    "perKill": 1,
+    "perSecond": 1,
+    "bossBonus": 500,
+    "rankSize": 10,
+    "titleSize": 5
+  },
+  "attract": {
+    "idleSeconds": 30,
+    "pickDelay": 1.2
   }
 }
