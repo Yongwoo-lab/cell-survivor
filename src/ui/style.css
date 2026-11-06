@@ -157,3 +157,84 @@ body { font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
   border: 1px solid rgba(120, 245, 235, 0.5); animation: blink 1.2s ease-in-out infinite; }
 
 #muted { position: fixed; right: 12px; bottom: 10px; font-size: 12px; opacity: 0.7; z-index: 7; }
+
+/* 분야 색 (도감 아이콘) */
+:root { --field-immuno: #7fd8ff; --field-cell: #3ff2e6; --field-molecular: #9ff0b0; --field-biochem: #ffe08a; --field-genetics: #d8b0ff; --field-physio: #ff9a7a; --gold: #ffd36b; }
+
+/* 진화 카드 (금색) */
+.card.evo .face { background: linear-gradient(160deg, rgba(110, 80, 10, 0.95), rgba(50, 24, 60, 0.95)); border-color: var(--gold);
+  box-shadow: 0 0 30px rgba(255, 211, 107, 0.55), inset 0 0 30px rgba(255, 211, 107, 0.15); }
+.card.evo .tag { background: rgba(255, 211, 107, 0.25); border-color: var(--gold); color: #fff3c4; }
+.card.evo h3 { color: #fff3c4; text-shadow: 0 0 12px var(--gold); }
+.card.evo .back { background: radial-gradient(circle at 50% 45%, rgba(255, 211, 107, 0.7), transparent 40%), repeating-radial-gradient(circle at 50% 45%, #5a400c 0 6px, #24102c 6px 12px); }
+
+/* 진화 연출: 금빛 플래시 + 가운데 문구 */
+#evolve { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+#evolve .flash { position: absolute; inset: 0; background: radial-gradient(circle, rgba(255, 240, 180, 0.95), rgba(255, 200, 80, 0.5) 50%, transparent 80%); animation: goldflash 0.9s ease-out both; }
+@keyframes goldflash { from { opacity: 1; } to { opacity: 0; } }
+#evolve .text { position: absolute; top: 30%; left: 0; right: 0; text-align: center; animation: act 2.5s ease-in-out both; }
+#evolve strong { display: block; font-size: clamp(44px, 7vw, 80px); color: #fff3c4; text-shadow: 0 0 30px var(--gold), 0 0 60px #ff9a20; }
+#evolve h3 { margin: 4px 0; font-size: clamp(20px, 3vw, 30px); color: var(--gold); }
+#evolve p { margin: 6px auto 0; max-width: min(640px, 84vw); font-size: clamp(14px, 1.8vw, 18px); line-height: 1.5; text-shadow: 0 2px 8px #000; }
+
+/* 총공격: 가장자리 청록 맥동 */
+#allout { position: fixed; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 110px 26px rgba(63, 242, 230, 0.75); animation: warn 0.6s ease-in-out infinite alternate; }
+
+/* HUD: 항생제 남은 시간 */
+#hud .pill { display: inline-block; margin-top: 4px; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 700;
+  background: linear-gradient(90deg, #fff 50%, #ff6070 50%); color: #300; box-shadow: 0 0 10px rgba(255, 120, 130, 0.7); }
+
+/* 결과 카드 추가 줄 */
+.rc .chips span.evo { background: rgba(255, 211, 107, 0.2); border-color: var(--gold); color: #fff3c4; }
+.rc .abx { margin: 0; font-size: 0.9em; line-height: 1.4; padding: 0.5em 0.8em; border-radius: 10px; background: rgba(63, 242, 230, 0.1); border: 1px solid rgba(63, 242, 230, 0.35); }
+.rc .abx.used { background: rgba(255, 90, 100, 0.1); border-color: rgba(255, 90, 100, 0.45); }
+.rc .cxc { margin: 0; font-size: 0.85em; color: #9ffff0; }
+
+/* 타이틀: 도감 버튼 */
+.codex-btn { margin-top: 4px; padding: 8px 18px; border-radius: 99px; font: inherit; font-size: 14px; color: #e6ffff; cursor: pointer;
+  background: rgba(4, 30, 36, 0.7); border: 1px solid rgba(120, 245, 235, 0.5); }
+.codex-btn:hover { border-color: #bffcff; box-shadow: 0 0 14px rgba(63, 242, 230, 0.5); }
+
+/* 면역 도감 */
+#codex { position: fixed; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(2, 6, 14, 0.92); animation: fadein 0.3s both; }
+.cx { width: min(1040px, 94vw); height: min(680px, 92vh); display: flex; flex-direction: column; gap: 12px; }
+.cx header { display: flex; align-items: baseline; gap: 14px; }
+.cx header h2 { margin: 0; font-size: 28px; color: #bffcff; text-shadow: 0 0 16px #3ff2e6; }
+.cx header span { color: #ffe08a; }
+.cx header small { margin-left: auto; opacity: 0.6; }
+.cx-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 300px; gap: 18px; }
+.cx-grid { overflow-y: auto; padding-right: 6px; }
+.cx-grid h3 { margin: 10px 0 8px; font-size: 13px; letter-spacing: 0.1em; color: #9ffff0; }
+.tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border-radius: 12px; cursor: pointer; font: inherit; font-size: 12px; color: inherit;
+  background: rgba(10, 40, 46, 0.6); border: 1px solid rgba(120, 245, 235, 0.2); }
+.tile.sel, .tile:hover { border-color: #bffcff; box-shadow: 0 0 12px rgba(63, 242, 230, 0.45); }
+.tile span { text-align: center; line-height: 1.25; min-height: 2.5em; }
+.cx-detail { padding: 20px; border-radius: 16px; background: linear-gradient(170deg, rgba(7, 52, 58, 0.9), rgba(22, 12, 54, 0.9)); border: 1px solid rgba(120, 245, 235, 0.4); overflow-y: auto; }
+.cx-detail .ico { width: 84px; height: 84px; margin: 0 auto 10px; display: block; }
+.cx-detail h3 { margin: 0 0 6px; text-align: center; font-size: 20px; }
+.cx-detail .tag { margin: 0 0 12px; text-align: center; font-size: 12px; opacity: 0.8; }
+.cx-detail .sci { line-height: 1.55; font-size: 14px; }
+.cx-detail h4 { margin: 14px 0 4px; font-size: 12px; color: #9ffff0; }
+.cx-detail p { margin: 0; font-size: 13px; line-height: 1.5; }
+
+/* 도감 아이콘: 색과 모양만 CSS로 */
+.ico { --c: #fff; position: relative; display: block; width: 46px; height: 46px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--c) 40%, #fff) 0 12%, color-mix(in srgb, var(--c) 55%, transparent) 40%, transparent 70%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--c) 60%, transparent), inset 0 0 8px color-mix(in srgb, var(--c) 70%, transparent); }
+.ico.locked { filter: brightness(0) saturate(0); opacity: 0.55; box-shadow: none; outline: 1px solid rgba(255, 255, 255, 0.15); }
+.ico-coccus, .ico-resistantCoccus { border-radius: 0; box-shadow: none;
+  background: radial-gradient(circle at 35% 40%, var(--c) 0 17%, transparent 19%), radial-gradient(circle at 62% 35%, var(--c) 0 17%, transparent 19%),
+    radial-gradient(circle at 50% 62%, var(--c) 0 17%, transparent 19%), radial-gradient(circle at 70% 64%, var(--c) 0 13%, transparent 15%); }
+.ico-bacillus { width: 46px; height: 20px; margin: 13px 0; border-radius: 99px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 50%, #fff), var(--c)); }
+.ico-virus { width: 30px; height: 30px; margin: 8px; background: var(--c); outline: 4px dotted var(--c); outline-offset: 3px; }
+.ico-infected { background: radial-gradient(circle at 50% 50%, #3a0a5a 0 18%, color-mix(in srgb, var(--c) 60%, transparent) 22% 60%, transparent 70%); }
+.ico-superbug { border-radius: 0; box-shadow: none; clip-path: polygon(50% 0, 61% 30%, 95% 25%, 72% 50%, 95% 75%, 61% 70%, 50% 100%, 39% 70%, 5% 75%, 28% 50%, 5% 25%, 39% 30%); background: var(--c); }
+.ico-net { background: repeating-conic-gradient(var(--c) 0 3deg, transparent 3deg 30deg), radial-gradient(circle, transparent 30%, color-mix(in srgb, var(--c) 40%, transparent) 32% 34%, transparent 36% 60%, color-mix(in srgb, var(--c) 40%, transparent) 62% 64%, transparent 66%); }
+.ico-antibody::after, .ico-plasmaCell::after { content: 'Y'; position: absolute; inset: 0; display: grid; place-content: center; font: 800 26px system-ui; color: #fff; text-shadow: 0 0 8px var(--c); }
+.ico-complement { background: radial-gradient(circle, transparent 38%, var(--c) 40% 48%, transparent 52%); }
+.ico-cytokine { background: radial-gradient(circle at 30% 30%, var(--c) 0 9%, transparent 11%), radial-gradient(circle at 70% 40%, var(--c) 0 9%, transparent 11%), radial-gradient(circle at 45% 72%, var(--c) 0 9%, transparent 11%); box-shadow: none; }
+.ico-nk { background: radial-gradient(circle, #fff 0 30%, color-mix(in srgb, var(--c) 50%, transparent) 50%, transparent 70%); }
+.ico-memory { background: radial-gradient(circle, var(--c) 0 20%, transparent 22% 42%, var(--c) 44% 48%, transparent 50%); }
+.ico-fever { background: radial-gradient(circle, #fff3c4 0 15%, #ff9a40 35%, rgba(255, 60, 40, 0.4) 60%, transparent 72%); }
+.ico.evo { --c: var(--gold) !important; outline: 2px solid var(--gold); outline-offset: 2px; }

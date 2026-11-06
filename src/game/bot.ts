@@ -2,6 +2,7 @@
 import type { World, Vec2 } from './world';
 
 export interface BotSkill { react: number; sight: number; wander: number }
+const PILL_CHANCE = 0.5; // 항생제를 먹으러 갈 확률 (알약마다 한 번 정함)
 export const BOTS: Record<string, BotSkill> = {
   novice: { react: 0.35, sight: 4.5, wander: 0.3 }, // 반응이 느리고 시야가 좁으며 가끔 딴짓
   careful: { react: 0.1, sight: 7, wander: 0 }, // 빠르게 피함
@@ -9,6 +10,7 @@ export const BOTS: Record<string, BotSkill> = {
 
 export function createBot(skill: BotSkill) {
   let move: Vec2 = { x: 0, y: 0 }, think = 0, wanderDir: Vec2 = { x: 1, y: 0 };
+  const wantPill = new Map<string, boolean>();
   return (w: World, dt: number): Vec2 => {
     if ((think -= dt) > 0) return move;
     think = skill.react;
@@ -26,7 +28,13 @@ export function createBot(skill: BotSkill) {
       move = wanderDir;
     } else if (Math.hypot(fx, fy) > 0.05) move = { x: fx, y: fy };
     else {
-      // 위협이 없으면 가장 가까운 항원 조각으로
+      // 위협이 없으면 먹기로 한 항생제 → 가장 가까운 항원 조각 순
+      const pf = w.pills.f;
+      for (let k = 0; k < w.pills.count; k++) {
+        const key = `${pf.x[k]},${pf.y[k]}`;
+        if (!wantPill.has(key)) wantPill.set(key, Math.random() < PILL_CHANCE);
+        if (wantPill.get(key)) return (move = { x: pf.x[k] - pl.x, y: pf.y[k] - pl.y });
+      }
       const g = w.gems.f;
       let best = -1, bd = 64;
       for (let i = 0; i < w.gems.count; i++) {

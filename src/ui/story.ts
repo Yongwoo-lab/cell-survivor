@@ -4,8 +4,9 @@ import enemies from '../data/enemies.json';
 import balance from '../data/balance.json';
 import type { World } from '../game/world';
 import { sfx } from '../audio';
+import cardData from '../data/cards.json';
 
-const ACT_SHOW = 2500, OFFICER_SHOW = 3000;
+const ACT_SHOW = 2500, OFFICER_SHOW = 3000, EVOLVE_SHOW = 2500;
 const officerLines = dialogue.officer as Record<string, string>;
 
 export function createStory() {
@@ -19,9 +20,17 @@ export function createStory() {
   warn.id = 'warn';
   warn.hidden = true;
   warn.innerHTML = `<div class="edge"></div><div class="text"><strong>${dialogue.ui.bossWarning}</strong>${dialogue.bossIntro.map((l) => `<p>${l}</p>`).join('')}</div>`;
-  document.body.append(act, officer, warn);
+  // 총공격: 가장자리 청록 맥동
+  const allOut = document.createElement('div');
+  allOut.id = 'allout';
+  allOut.hidden = true;
+  // 진화: 금빛 플래시 + "진화!" + science
+  const evolve = document.createElement('div');
+  evolve.id = 'evolve';
+  evolve.hidden = true;
+  document.body.append(act, officer, warn, allOut, evolve);
 
-  let lastAct = -1, seen = 0, actTimer = 0, officerTimer = 0, busyUntil = 0;
+  let lastAct = -1, seen = 0, notes = 0, evolved = 0, actTimer = 0, officerTimer = 0, evolveTimer = 0, busyUntil = 0;
   const queue: string[] = [];
 
   const showOfficer = (line: string) => {
@@ -36,8 +45,8 @@ export function createStory() {
 
   return {
     reset() {
-      lastAct = -1; seen = 0; queue.length = 0; busyUntil = 0;
-      act.classList.remove('on'); officer.classList.remove('on'); warn.hidden = true;
+      lastAct = -1; seen = 0; notes = 0; evolved = 0; queue.length = 0; busyUntil = 0;
+      act.classList.remove('on'); officer.classList.remove('on'); warn.hidden = true; allOut.hidden = true; evolve.hidden = true;
     },
     update(w: World, sound = true) {
       if (w.act !== lastAct) {
@@ -56,7 +65,21 @@ export function createStory() {
         const line = officerLines[enemies[w.seen[seen++]].id];
         if (line) queue.push(line);
       }
+      // 항생제·총공격 같은 상황 대사
+      while (notes < w.notes.length) {
+        const line = officerLines[w.notes[notes++]];
+        if (line) queue.push(line);
+      }
       if (queue.length && performance.now() > busyUntil) showOfficer(queue.shift()!);
+      allOut.hidden = !(w.allOut && !w.over);
+      if (w.evolveLog.length > evolved) {
+        const ev = cardData.evolutions.find((x) => x.id === w.evolveLog[w.evolveLog.length - 1])!;
+        evolved = w.evolveLog.length;
+        evolve.innerHTML = `<div class="flash"></div><div class="text"><strong>${dialogue.ui.evolve}</strong><h3>${ev.name}</h3><p>${ev.science}</p></div>`;
+        evolve.hidden = false;
+        clearTimeout(evolveTimer);
+        evolveTimer = window.setTimeout(() => { evolve.hidden = true; }, EVOLVE_SHOW);
+      }
       // 보스 경고: 켜지는 순간 사이렌
       const warnOn = w.bossWarn > 0;
       if (warnOn && warn.hidden && sound) sfx.siren(w.bossWarn);

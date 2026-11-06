@@ -11,7 +11,10 @@
     "bacillus": "막대균 발견! 편모로 빠르게 돌진한다. 조심해!",
     "virus": "바이러스 침입! 세포에 닿으면 감염세포로 바꿔 버린다!",
     "infected": "감염세포 확인! 안에서 바이러스가 계속 나온다. 세포째 제거해야 해!",
-    "superbug": "경고! 항생제에 내성을 가진 슈퍼버그다!"
+    "superbug": "경고! 항생제에 내성을 가진 슈퍼버그다!",
+    "antibioticSpawn": "항생제 발견! 세균에는 강력하지만… 남용하면 내성균이 생긴다.",
+    "antibioticTaken": "항생제 투입! 살아남은 세균이 내성을 키우고 있다.",
+    "allOut": "총공격!"
   },
   "bossIntro": [
     "누군가 감기에 항생제를 마구 먹었다…",
@@ -19,6 +22,8 @@
   ],
   "ending": "덕분에 새내기는 무사히 기말고사를 치렀습니다.",
   "gameOver": "새내기가 몸살로 쓰러졌습니다… 다시 도전해 볼까요?",
+  "antibioticResultUsed": "항생제를 {n}번 썼어요. 그만큼 슈퍼버그가 강해졌어요.",
+  "antibioticResultNone": "항생제 없이 이겨냈어요! 꼭 필요할 때만 쓰는 것이 내성균을 막는 길이에요.",
   "disclaimer": "게임을 위해 생명과학 개념을 단순화했어요. 실제로는 훨씬 더 정교하게 작동해요.",
   "acts": [
     { "id": "vessel", "title": "1막 · 혈관", "line": "상처 틈으로 세균이 혈관에 들어왔다!" },
@@ -44,6 +49,22 @@
     "enterName": "10위 안! 이름을 입력하세요 (영문 3글자 · Enter)",
     "score": "점수",
     "yourScore": "내 점수",
-    "muted": "음소거 · M"
+    "muted": "음소거 · M",
+    "evolve": "진화!",
+    "evolution": "진화",
+    "noEffect": "효과 없음!",
+    "antibiotic": "항생제",
+    "codex": "면역 도감",
+    "codexButton": "D · 면역 도감",
+    "codexClose": "Esc · 닫기",
+    "codexLocked": "???",
+    "codexCount": "도감 {n}/{total}",
+    "codexEnemies": "병원체",
+    "codexCards": "면역 카드",
+    "codexEvolutions": "진화 카드",
+    "codexField": "분야",
+    "codexEffect": "게임 속 효과",
+    "codexRequires": "진화 조건",
+    "codexStats": "체력 {hp} · 속도 {speed} · 피해 {damage}"
   }
 }

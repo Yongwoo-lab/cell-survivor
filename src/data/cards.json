@@ -1,98 +1,126 @@
-[
-  {
-    "id": "macrophage",
-    "name": "대식세포 포식",
-    "effect": "내 주위를 도는 대식세포가 닿는 적을 삼켜 큰 피해를 준다.",
-    "science": "대식세포는 병원체를 통째로 삼킨 뒤 세포 안의 소화 효소로 분해한다(식세포 작용).",
-    "field": "cell",
-    "levels": [
-      { "count": 1, "damage": 12, "orbitRadius": 3.0, "orbitSpeed": 2.0 },
-      { "count": 2, "damage": 16, "orbitRadius": 3.2, "orbitSpeed": 2.3 },
-      { "count": 3, "damage": 22, "orbitRadius": 3.5, "orbitSpeed": 2.6 }
-    ]
-  },
-  {
-    "id": "net",
-    "name": "호중구 NET",
-    "effect": "바닥에 끈적한 그물을 깔아 그 위의 적을 느리게 하고 지속 피해를 준다.",
-    "science": "호중구는 자신의 DNA와 항균 단백질로 그물(NET)을 만들어 내뿜어 세균을 붙잡는다.",
-    "field": "molecular",
-    "levels": [
-      { "cooldown": 4.0, "radius": 2.5, "duration": 3.0, "slow": 0.4, "dps": 6 },
-      { "cooldown": 3.5, "radius": 3.0, "duration": 3.5, "slow": 0.5, "dps": 9 },
-      { "cooldown": 3.0, "radius": 3.5, "duration": 4.0, "slow": 0.6, "dps": 12 }
-    ]
-  },
-  {
-    "id": "antibody",
-    "name": "항체 표식",
-    "effect": "맞은 적에게 표식을 붙인다. 표식 달린 적은 모든 공격에 추가 피해를 받는다.",
-    "science": "B세포는 유전자 조각을 재조합해 수많은 종류의 항체를 만들고, 항체가 붙은 병원체는 면역세포의 표적이 된다.",
-    "field": "genetics",
-    "levels": [
-      { "cooldown": 1.2, "projectiles": 2, "markBonus": 0.25, "markDuration": 4.0 },
-      { "cooldown": 1.0, "projectiles": 3, "markBonus": 0.35, "markDuration": 5.0 },
-      { "cooldown": 0.8, "projectiles": 4, "markBonus": 0.5, "markDuration": 6.0 }
-    ]
-  },
-  {
-    "id": "complement",
-    "name": "보체 공격",
-    "effect": "일정 시간마다 표식 달린 적들이 동시에 터진다. 주변 적에게도 피해가 번진다.",
-    "science": "보체 단백질은 연쇄적으로 활성화되어 세균의 막에 구멍을 뚫는 막공격복합체를 만든다.",
-    "field": "biochem",
-    "levels": [
-      { "cooldown": 5.0, "burstDamage": 20, "splashRadius": 1.5 },
-      { "cooldown": 4.2, "burstDamage": 30, "splashRadius": 2.0 },
-      { "cooldown": 3.5, "burstDamage": 42, "splashRadius": 2.5 }
-    ]
-  },
-  {
-    "id": "cytokine",
-    "name": "사이토카인",
-    "effect": "공격 속도와 이동 속도가 오른다.",
-    "science": "사이토카인은 면역세포끼리 주고받는 신호 물질로, 다른 세포를 불러 모으고 활성화한다.",
-    "field": "cell",
-    "levels": [
-      { "attackSpeed": 0.15, "moveSpeed": 0.08 },
-      { "attackSpeed": 0.3, "moveSpeed": 0.15 },
-      { "attackSpeed": 0.45, "moveSpeed": 0.22 }
-    ]
-  },
-  {
-    "id": "nk",
-    "name": "NK세포",
-    "effect": "NK세포가 감염세포를 찾아가 제거한다. 감염세포가 없으면 가장 체력이 높은 적을 노린다.",
-    "science": "NK세포는 바이러스에 감염되었거나 이상해진 세포를 알아보고 스스로 죽게 만든다.",
-    "field": "immuno",
-    "levels": [
-      { "count": 1, "damage": 30, "cooldown": 2.0 },
-      { "count": 2, "damage": 40, "cooldown": 1.7 },
-      { "count": 3, "damage": 55, "cooldown": 1.4 }
-    ]
-  },
-  {
-    "id": "memory",
-    "name": "기억세포",
-    "effect": "같은 종류의 적을 많이 처치할수록 그 종류에게 주는 피해가 계속 커진다.",
-    "science": "한 번 만난 병원체를 기억하는 세포가 남아, 두 번째 감염 때는 훨씬 빠르고 강하게 막아낸다(2차 면역반응).",
-    "field": "immuno",
-    "levels": [
-      { "bonusPerKill": 0.004, "maxBonus": 0.4 },
-      { "bonusPerKill": 0.006, "maxBonus": 0.6 },
-      { "bonusPerKill": 0.008, "maxBonus": 0.8 }
-    ]
-  },
-  {
-    "id": "fever",
-    "name": "발열",
-    "effect": "모든 적이 느려진다. 대신 내 체력이 조금씩 줄어든다.",
-    "science": "체온이 오르면 병원체의 증식이 느려지고 면역 반응이 빨라지지만, 몸에도 부담이 된다.",
-    "field": "physio",
-    "levels": [
-      { "enemySlow": 0.15, "selfDrainPerSec": 0.3 },
-      { "enemySlow": 0.25, "selfDrainPerSec": 0.4 },
-      { "enemySlow": 0.35, "selfDrainPerSec": 0.5 }
-    ]
-  }
-]
+{
+  "cards": [
+    {
+      "id": "macrophage",
+      "name": "대식세포 포식",
+      "effect": "내 주위를 도는 대식세포가 닿는 적을 삼켜 큰 피해를 준다.",
+      "science": "대식세포는 병원체를 통째로 삼킨 뒤 세포 안의 소화 효소로 분해한다(식세포 작용).",
+      "field": "cell",
+      "levels": [
+        { "count": 1, "damage": 12, "orbitRadius": 3.0, "orbitSpeed": 2.0 },
+        { "count": 2, "damage": 16, "orbitRadius": 3.2, "orbitSpeed": 2.3 },
+        { "count": 3, "damage": 22, "orbitRadius": 3.5, "orbitSpeed": 2.6 }
+      ]
+    },
+    {
+      "id": "net",
+      "name": "호중구 NET",
+      "effect": "바닥에 끈적한 그물을 깔아 그 위의 적을 느리게 하고 지속 피해를 준다.",
+      "science": "호중구는 자신의 DNA와 항균 단백질로 그물(NET)을 만들어 내뿜어 세균을 붙잡는다.",
+      "field": "molecular",
+      "levels": [
+        { "cooldown": 4.0, "radius": 2.5, "duration": 3.0, "slow": 0.4, "dps": 6 },
+        { "cooldown": 3.5, "radius": 3.0, "duration": 3.5, "slow": 0.5, "dps": 9 },
+        { "cooldown": 3.0, "radius": 3.5, "duration": 4.0, "slow": 0.6, "dps": 12 }
+      ]
+    },
+    {
+      "id": "antibody",
+      "name": "항체 표식",
+      "effect": "맞은 적에게 표식을 붙인다. 표식 달린 적은 모든 공격에 추가 피해를 받는다.",
+      "science": "B세포는 유전자 조각을 재조합해 수많은 종류의 항체를 만들고, 항체가 붙은 병원체는 면역세포의 표적이 된다.",
+      "field": "genetics",
+      "levels": [
+        { "cooldown": 1.2, "projectiles": 2, "markBonus": 0.25, "markDuration": 4.0 },
+        { "cooldown": 1.0, "projectiles": 3, "markBonus": 0.35, "markDuration": 5.0 },
+        { "cooldown": 0.8, "projectiles": 4, "markBonus": 0.5, "markDuration": 6.0 }
+      ]
+    },
+    {
+      "id": "complement",
+      "name": "보체 공격",
+      "effect": "일정 시간마다 표식 달린 적들이 동시에 터진다. 주변 적에게도 피해가 번진다.",
+      "science": "보체 단백질은 연쇄적으로 활성화되어 세균의 막에 구멍을 뚫는 막공격복합체를 만든다.",
+      "field": "biochem",
+      "levels": [
+        { "cooldown": 5.0, "burstDamage": 20, "splashRadius": 1.5 },
+        { "cooldown": 4.2, "burstDamage": 30, "splashRadius": 2.0 },
+        { "cooldown": 3.5, "burstDamage": 42, "splashRadius": 2.5 }
+      ]
+    },
+    {
+      "id": "cytokine",
+      "name": "사이토카인",
+      "effect": "공격 속도와 이동 속도가 오른다.",
+      "science": "사이토카인은 면역세포끼리 주고받는 신호 물질로, 다른 세포를 불러 모으고 활성화한다.",
+      "field": "cell",
+      "levels": [
+        { "attackSpeed": 0.15, "moveSpeed": 0.08 },
+        { "attackSpeed": 0.3, "moveSpeed": 0.15 },
+        { "attackSpeed": 0.45, "moveSpeed": 0.22 }
+      ]
+    },
+    {
+      "id": "nk",
+      "name": "NK세포",
+      "effect": "NK세포가 감염세포를 찾아가 제거한다. 감염세포가 없으면 가장 체력이 높은 적을 노린다.",
+      "science": "NK세포는 바이러스에 감염되었거나 이상해진 세포를 알아보고 스스로 죽게 만든다.",
+      "field": "immuno",
+      "levels": [
+        { "count": 1, "damage": 30, "cooldown": 2.0 },
+        { "count": 2, "damage": 40, "cooldown": 1.7 },
+        { "count": 3, "damage": 55, "cooldown": 1.4 }
+      ]
+    },
+    {
+      "id": "memory",
+      "name": "기억세포",
+      "effect": "같은 종류의 적을 많이 처치할수록 그 종류에게 주는 피해가 계속 커진다.",
+      "science": "한 번 만난 병원체를 기억하는 세포가 남아, 두 번째 감염 때는 훨씬 빠르고 강하게 막아낸다(2차 면역반응).",
+      "field": "immuno",
+      "levels": [
+        { "bonusPerKill": 0.004, "maxBonus": 0.4 },
+        { "bonusPerKill": 0.006, "maxBonus": 0.6 },
+        { "bonusPerKill": 0.008, "maxBonus": 0.8 }
+      ]
+    },
+    {
+      "id": "fever",
+      "name": "발열",
+      "effect": "모든 적이 느려진다. 대신 내 체력이 조금씩 줄어든다.",
+      "science": "체온이 오르면 병원체의 증식이 느려지고 면역 반응이 빨라지지만, 몸에도 부담이 된다.",
+      "field": "physio",
+      "levels": [
+        { "enemySlow": 0.15, "selfDrainPerSec": 0.3 },
+        { "enemySlow": 0.25, "selfDrainPerSec": 0.4 },
+        { "enemySlow": 0.35, "selfDrainPerSec": 0.5 }
+      ]
+    }
+  ],
+  "evolutions": [
+    {
+      "id": "classical",
+      "name": "고전 경로 활성화",
+      "requires": { "antibody": 3, "complement": 1 },
+      "effect": "표식 달린 적이 터질 때 주변 적에게 표식과 폭발이 연쇄로 번진다.",
+      "science": "항체가 붙은 병원체에는 보체 단백질이 연쇄적으로 달라붙어 활성화된다(보체의 고전 경로).",
+      "field": "immuno"
+    },
+    {
+      "id": "activatedMacrophage",
+      "name": "활성화 대식세포 군단",
+      "requires": { "macrophage": 3, "cytokine": 1 },
+      "effect": "대식세포가 2마리 늘고, 크기와 피해가 2배가 되며 닿은 적을 잠깐 끌어당긴다.",
+      "science": "사이토카인(인터페론 감마 등)을 받은 대식세포는 활성화되어 병원체를 훨씬 잘 없앤다.",
+      "field": "cell"
+    },
+    {
+      "id": "plasmaCell",
+      "name": "형질세포 대량 생산",
+      "requires": { "memory": 3, "antibody": 1 },
+      "effect": "1초마다 화면 안의 모든 적에게 항체 표식이 비처럼 쏟아진다.",
+      "science": "기억 B세포는 다시 만난 병원체에 맞서 항체를 대량으로 만드는 형질세포로 빠르게 바뀐다.",
+      "field": "immuno"
+    }
+  ]
+}

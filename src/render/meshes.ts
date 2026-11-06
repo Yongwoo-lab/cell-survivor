@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import balance from '../data/balance.json';
-import cards from '../data/cards.json';
+import cardData from '../data/cards.json';
 import dialogue from '../data/dialogue.json';
 import { ENEMIES, MAX_ENEMIES, type World } from '../game/world';
 import { glassy, time } from './materials';
-import { createParticles, createShockwaves, createPopups } from './effects';
+import { createParticles, createShockwaves, createPopups, createRain } from './effects';
 
 const COCCUS = ENEMIES.find((e) => e.id === 'coccus')!;
 const T = balance.cardTuning, CELL = balance.cells;
@@ -194,7 +194,8 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   );
 
   // 대식세포·NK세포: 아군 세포 (청록·흰색)
-  const macroMax = Math.max(...cards.find((c) => c.id === 'macrophage')!.levels.map((l) => (l as { count: number }).count));
+  const macroMax = Math.max(...cardData.cards.find((c) => c.id === 'macrophage')!.levels.map((l) => (l as { count: number }).count))
+    + balance.evolutions.activatedMacrophage.extraCount;
   const macroMesh = instanced(new THREE.SphereGeometry(T.orbiterRadius, 32, 20), glassy({
     color: 0x1a5a5a, opacity: 0.35, rim: 0x9ffff0, rimStrength: 1.3, emissive: 0x0a3a3a, depthWrite: true,
   }), macroMax);
@@ -217,6 +218,24 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   const particles = createParticles(scene);
   const shocks = createShockwaves(scene);
   const popups = createPopups(scene, camera, dialogue.ui.resist);
+  const noEffect = createPopups(scene, camera, dialogue.ui.noEffect);
+  const rain = createRain(scene);
+
+  // 항생제 알약: 반은 흰색, 반은 붉은 캡슐 (정점 색). 사라지기 직전 깜빡인다.
+  const pillGeo = new THREE.CapsuleGeometry(0.28, 0.55, 6, 14).rotateZ(Math.PI / 2);
+  const pp = pillGeo.attributes.position, pillCol = new Float32Array(pp.count * 3);
+  for (let i = 0; i < pp.count; i++) {
+    const c = pp.getX(i) > 0 ? [1.6, 0.35, 0.4] : [1.6, 1.6, 1.6];
+    pillCol.set(c, i * 3);
+  }
+  pillGeo.setAttribute('color', new THREE.BufferAttribute(pillCol, 3));
+  const pillMesh = instanced(pillGeo, new THREE.MeshBasicMaterial({ vertexColors: true }), 8);
+  const pillHalo = instanced(
+    new THREE.RingGeometry(0.7, 0.85, 32).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffffff).multiplyScalar(1.2), transparent: true, opacity: 0.5, depthWrite: false }),
+    8,
+  );
+  scene.add(pillMesh, pillHalo);
   const infectColor = new THREE.Color(0xd65cff);
   const netColor = new THREE.Color(0xbffcff), tmpColor = new THREE.Color();
 
@@ -292,7 +311,9 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
       w.macro.forEach((o, k) => {
         p.set(o.x, 0.8, o.y);
         q.setFromAxisAngle(UP, t * 2 + k);
-        s.set(1 + Math.sin(t * 6 + k) * 0.06, 1, 1 - Math.sin(t * 6 + k) * 0.06);
+        const big = w.macroR / T.orbiterRadius; // 활성화 대식세포는 더 크다
+        s.set(big * (1 + Math.sin(t * 6 + k) * 0.06), big, big * (1 - Math.sin(t * 6 + k) * 0.06));
+        p.y = 0.8 * big;
         macroMesh.setMatrixAt(k, m.compose(p, q, s));
       });
       macroMesh.count = w.macro.length;
@@ -340,6 +361,24 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
       for (const c of w.infections) particles.burst(c.x, 0.6, c.y, infectColor, 14, 0.8);
       for (const h of w.resistHits) popups.add(h.x, 3.6, h.y);
       popups.update(dt);
+      for (const h of w.noEffectHits) noEffect.add(h.x, 1.4, h.y);
+      noEffect.update(dt);
+      for (const r of w.rain) rain.add(r.x, r.y);
+      rain.update(dt);
+
+      const pf = w.pills.f;
+      for (let k = 0; k < w.pills.count; k++) {
+        const blink = pf.life[k] < 3 && Math.floor(t * 8) % 2 === 0;
+        p.set(pf.x[k], 0.6 + Math.sin(t * 3 + k) * 0.15, pf.y[k]);
+        q.setFromAxisAngle(UP, t * 1.5 + k);
+        s.setScalar(blink ? 0 : 1);
+        pillMesh.setMatrixAt(k, m.compose(p, q, s));
+        p.y = 0.05;
+        s.setScalar(blink ? 0 : 1 + Math.sin(t * 5) * 0.12);
+        pillHalo.setMatrixAt(k, m.compose(p, q, s));
+      }
+      pillMesh.count = pillHalo.count = w.pills.count;
+      pillMesh.instanceMatrix.needsUpdate = pillHalo.instanceMatrix.needsUpdate = true;
       for (const b of w.bursts) {
         shocks.add(b.x, b.y, b.r);
         particles.burst(b.x, 0.4, b.y, flashColor, 8, 1.4);

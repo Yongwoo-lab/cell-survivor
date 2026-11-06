@@ -16,8 +16,9 @@ const el = (id: string, html = '') => {
 };
 
 export function createTitle() {
-  const title = el('title', `<h1>${dialogue.ui.title}</h1><p>${dialogue.ui.pressStart}</p><aside><h3>${dialogue.ui.ranking}</h3><ol></ol></aside>`);
+  const title = el('title', `<h1>${dialogue.ui.title}</h1><p>${dialogue.ui.pressStart}</p><button class="codex-btn">${dialogue.ui.codexButton}</button><aside><h3>${dialogue.ui.ranking}</h3><ol></ol></aside>`);
   const side = title.querySelector<HTMLElement>('aside')!;
+  const codexBtn = title.querySelector<HTMLElement>('.codex-btn')!;
   // 대기 화면 자동 시연 위에 깜빡이는 안내
   const demo = el('demo', `<p>${dialogue.ui.pressStart}</p>`);
   const intro = el('intro', `<div class="lines"></div><div class="call">${dialogue.introCall}</div>`);
@@ -44,6 +45,7 @@ export function createTitle() {
       side.querySelector('ol')!.innerHTML = rankRows(top);
     },
     showDemo: (on: boolean) => { demo.hidden = !on; },
+    onCodex: (fn: () => void) => codexBtn.addEventListener('click', fn),
     // 인트로: 세 문장을 타자 치듯, 마지막에 introCall
     playIntro(onDone: () => void) {
       done = onDone;

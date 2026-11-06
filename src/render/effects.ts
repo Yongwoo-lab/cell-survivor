@@ -140,3 +140,29 @@ export function createPopups(scene: THREE.Scene, camera: THREE.Camera, text: str
     },
   };
 }
+
+const RAIN_MAX = 256, RAIN_SPEED = 28, RAIN_FROM = 9;
+
+// 형질세포: 항체 표식이 위에서 비처럼 떨어진다 (가는 금빛 줄기)
+export function createRain(scene: THREE.Scene) {
+  const mesh = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.05, 0.7, 0.05),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff0a0).multiplyScalar(2.2) }),
+    RAIN_MAX,
+  );
+  mesh.frustumCulled = false;
+  scene.add(mesh);
+  const list: { x: number; y: number; z: number }[] = [];
+  const m = new THREE.Matrix4();
+  return {
+    add(x: number, z: number) {
+      if (list.length < RAIN_MAX) list.push({ x: x + (Math.random() - 0.5) * 0.4, y: RAIN_FROM + Math.random() * 3, z });
+    },
+    update(dt: number) {
+      for (let i = list.length - 1; i >= 0; i--) if ((list[i].y -= RAIN_SPEED * dt) < 0.5) list.splice(i, 1);
+      list.forEach((d, i) => mesh.setMatrixAt(i, m.makeTranslation(d.x, d.y, d.z)));
+      mesh.count = list.length;
+      mesh.instanceMatrix.needsUpdate = true;
+    },
+  };
+}

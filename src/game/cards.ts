@@ -1,14 +1,21 @@
-// 카드 효과. 수치는 cards.json의 levels, 동작 상수는 balance.json의 cardTuning.
-import cards from '../data/cards.json';
+// 카드 효과. 수치는 cards.json의 levels, 동작 상수는 balance.json의 cardTuning·evolutions.
+import cardData from '../data/cards.json';
 import enemies from '../data/enemies.json';
 import balance from '../data/balance.json';
 import type { World } from './world';
 import { addPick } from './result';
 
+const cards = cardData.cards;
+export const EVOLUTIONS = cardData.evolutions;
 export type Card = (typeof cards)[number];
+export type Evolution = (typeof EVOLUTIONS)[number];
+export type Pick = Card | Evolution;
+export const isEvolution = (c: Pick): c is Evolution => 'requires' in c;
 type Lv = Record<string, number>;
 
-const T = balance.cardTuning, S = balance.shot;
+const T = balance.cardTuning, S = balance.shot, EV = balance.evolutions, A = balance.antibiotic, B = balance.boss;
+const kindIdx = (id: string) => enemies.findIndex((e) => e.id === id);
+const BOSS = kindIdx(B.id), VIRUS_SET = new Set(A.noEffect.map(kindIdx)), BACTERIA = new Set(A.bacteria.map(kindIdx));
 export const FLASH_TIME = 0.05;
 export const MAX_RADIUS = Math.max(...enemies.map((e) => e.radius));
 const RADIUS = enemies.map((e) => e.radius);
@@ -26,32 +33,49 @@ export const atkMul = (w: World) => 1 + (cardLevel(w, 'cytokine')?.attackSpeed ?
 // 선행 카드: 보체는 항체 표식이 있어야 의미가 있다
 const REQUIRES: Record<string, string> = { complement: 'antibody' };
 
-export function drawCards(w: World): Card[] {
-  const pool = cards.filter((c) => (w.cards[c.id] ?? 0) < c.levels.length && (!REQUIRES[c.id] || w.cards[REQUIRES[c.id]]));
-  for (let i = pool.length - 1; i > 0; i--) {
+function shuffle<T>(a: T[]) {
+  for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  return pool.slice(0, 3);
+  return a;
+}
+
+const evolutionReady = (w: World, ev: Evolution) =>
+  !w.evolved[ev.id] && Object.entries(ev.requires).every(([id, lv]) => (w.cards[id] ?? 0) >= lv);
+// 진화 재료가 된 카드는 더 이상 뽑기에 나오지 않는다 (효과는 진화 카드 안에서 계속)
+export const isMaterial = (w: World, id: string) => EVOLUTIONS.some((ev) => w.evolved[ev.id] && id in ev.requires);
+
+// 진화 조건을 채웠으면 진화 카드 1장이 반드시 들어간다
+export function drawCards(w: World): Pick[] {
+  const pool: Pick[] = shuffle(cards.filter((c) =>
+    (w.cards[c.id] ?? 0) < c.levels.length && !isMaterial(w, c.id) && (!REQUIRES[c.id] || w.cards[REQUIRES[c.id]])));
+  const ready = EVOLUTIONS.filter((ev) => evolutionReady(w, ev));
+  if (!ready.length) return pool.slice(0, 3);
+  return shuffle([ready[Math.floor(Math.random() * ready.length)], ...pool.slice(0, 2)]);
 }
 
 export function selectCard(w: World, idx: number) {
   const c = w.choosing?.[idx];
   if (!c) return;
-  w.cards[c.id] = (w.cards[c.id] ?? 0) + 1;
+  if (isEvolution(c)) {
+    w.evolved[c.id] = true;
+    w.evolveLog.push(c.id);
+    w.evoSlow = EV.slowmoTime;
+  } else w.cards[c.id] = (w.cards[c.id] ?? 0) + 1;
   addPick(w.result, c.field);
   w.choosing = null;
   if (--w.pendingLevels > 0) w.slowmo = balance.levelUp.slowmoTime;
 }
 
-export type Source = 'shot' | 'macrophage' | 'net' | 'complement' | 'nk';
+export type Source = 'shot' | 'macrophage' | 'net' | 'complement' | 'nk' | 'antibody';
 
 // 표식(항체)·기억세포 보너스가 모든 공격에 곱해진다.
 // 내성이 있는 적(보스)은 같은 공격 종류를 맞을수록 그 종류의 피해가 줄어든다. stack: 지속 피해는 dt만큼만 쌓임.
 export function damageEnemy(w: World, i: number, amount: number, src: Source, flash = true, stack = 1) {
-  const e = w.enemies.f;
+  const e = w.enemies.f, kind = e.kind[i];
   if (e.hp[i] <= 0) return;
-  let mult = 1;
+  let mult = w.allOut ? 1 + B.allOutBonus : 1;
   const res = enemies[e.kind[i]].resistance;
   if (res) {
     const r = w.resist[src] ?? 0;
@@ -66,7 +90,18 @@ export function damageEnemy(w: World, i: number, amount: number, src: Source, fl
   if (ab && e.mark[i] > 0) mult += ab.markBonus;
   const mem = cardLevel(w, 'memory');
   if (mem) mult += Math.min(mem.maxBonus, w.kills[e.kind[i]] * mem.bonusPerKill);
-  e.hp[i] -= amount * mult;
+  let total = amount * mult;
+  // 항생제: 세균에게만 피해 ×damageMul, 바이러스에는 효과 없음
+  if (w.antibioticT > 0) {
+    if (BACTERIA.has(kind)) total *= A.damageMul;
+    else if (VIRUS_SET.has(kind) && flash && w.noEffectCd <= 0) {
+      w.noEffectHits.push({ x: e.x[i], y: e.y[i] });
+      w.noEffectCd = A.popupInterval;
+    }
+  }
+  // 항생제를 쓸수록 슈퍼버그의 기본 피해 감소가 쌓인다
+  if (kind === BOSS) total *= 1 - Math.min(A.bossReductionMax, w.antibioticUses * A.bossReductionPerUse);
+  e.hp[i] -= total;
   if (flash) { e.flash[i] = FLASH_TIME; w.fx.hit++; }
 }
 
@@ -115,6 +150,25 @@ function nkTarget(w: World) {
   return best;
 }
 
+// 보체 폭발 한 번: 주변 피해. 고전 경로면 맞은 적에게 표식을 붙이고 다음 연쇄를 예약한다.
+function burst(w: World, x: number, y: number, cp: Lv, depth: number, self: number, dmgMul = 1) {
+  const e = w.enemies.f, C = EV.classical, classical = w.evolved.classical;
+  const dur = cardLevel(w, 'antibody')?.markDuration ?? 4;
+  let branches = 0;
+  w.hash.query(x, y, cp.splashRadius + MAX_RADIUS, (j) => {
+    const r = cp.splashRadius + RADIUS[e.kind[j]];
+    if (j === self || e.hp[j] <= 0 || (e.x[j] - x) ** 2 + (e.y[j] - y) ** 2 > r * r) return;
+    damageEnemy(w, j, cp.burstDamage * (depth ? dmgMul : T.complementSplashRatio), 'complement');
+    if (!classical) return;
+    e.mark[j] = dur;
+    if (depth < C.chainDepth && branches < C.chainBranch && w.chains.length < 200) {
+      branches++;
+      w.chains.push({ x: e.x[j], y: e.y[j], depth: depth + 1, t: C.chainDelay });
+    }
+  });
+  w.bursts.push({ x, y, r: cp.splashRadius });
+}
+
 export function updateCards(w: World, dt: number) {
   const pl = w.player, e = w.enemies.f;
 
@@ -122,14 +176,26 @@ export function updateCards(w: World, dt: number) {
   w.macro.length = 0;
   const mc = cardLevel(w, 'macrophage');
   if (mc) {
-    for (let k = 0; k < mc.count; k++) {
-      const a = w.time * mc.orbitSpeed + (k / mc.count) * Math.PI * 2;
-      const x = pl.x + Math.cos(a) * mc.orbitRadius, y = pl.y + Math.sin(a) * mc.orbitRadius;
+    // 활성화 대식세포 군단: 수 +extraCount, 크기·피해 배수, 주변 적을 끌어당김
+    const am = w.evolved.activatedMacrophage ? EV.activatedMacrophage : null;
+    const count = mc.count + (am ? am.extraCount : 0);
+    const orbR = T.orbiterRadius * (am ? am.sizeMul : 1), dmg = mc.damage * (am ? am.damageMul : 1);
+    const ring = mc.orbitRadius + (am ? orbR - T.orbiterRadius : 0);
+    w.macroR = orbR;
+    for (let k = 0; k < count; k++) {
+      const a = w.time * mc.orbitSpeed + (k / count) * Math.PI * 2;
+      const x = pl.x + Math.cos(a) * ring, y = pl.y + Math.sin(a) * ring;
       w.macro.push({ x, y });
-      w.hash.query(x, y, T.orbiterRadius + MAX_RADIUS, (i) => {
-        const r = T.orbiterRadius + RADIUS[e.kind[i]];
-        if (e.macroCd[i] > 0 || (e.x[i] - x) ** 2 + (e.y[i] - y) ** 2 > r * r) return;
-        damageEnemy(w, i, mc.damage, 'macrophage');
+      const reach = am ? orbR * am.pullRadiusMul : orbR;
+      w.hash.query(x, y, reach + MAX_RADIUS, (i) => {
+        const dx = x - e.x[i], dy = y - e.y[i], d2 = dx * dx + dy * dy;
+        if (am && e.kind[i] !== BOSS && d2 < reach * reach && d2 > 0) {
+          const d = Math.sqrt(d2), step = Math.min(d, am.pullSpeed * dt);
+          e.x[i] += (dx / d) * step; e.y[i] += (dy / d) * step;
+        }
+        const r = orbR + RADIUS[e.kind[i]];
+        if (e.macroCd[i] > 0 || d2 > r * r) return;
+        damageEnemy(w, i, dmg, 'macrophage');
         e.macroCd[i] = T.macroHitInterval;
       });
     }
@@ -163,14 +229,28 @@ export function updateCards(w: World, dt: number) {
         for (const i of marked) {
           const x = e.x[i], y = e.y[i];
           damageEnemy(w, i, cp.burstDamage, 'complement');
-          w.hash.query(x, y, cp.splashRadius + MAX_RADIUS, (j) => {
-            const r = cp.splashRadius + RADIUS[e.kind[j]];
-            if (j !== i && (e.x[j] - x) ** 2 + (e.y[j] - y) ** 2 <= r * r) damageEnemy(w, j, cp.burstDamage * T.complementSplashRatio, 'complement');
-          });
           e.mark[i] = 0;
-          w.bursts.push({ x, y, r: cp.splashRadius });
+          burst(w, x, y, cp, 0, i);
         }
       }
+    }
+    // 고전 경로: 예약된 연쇄 폭발
+    for (let k = w.chains.length - 1; k >= 0; k--) {
+      const c = w.chains[k];
+      if ((c.t -= dt) > 0) continue;
+      w.chains.splice(k, 1);
+      burst(w, c.x, c.y, cp, c.depth, -1, EV.classical.chainDamageMul);
+    }
+  }
+
+  // 형질세포: interval마다 화면 안의 모든 적에게 표식
+  if (w.evolved.plasmaCell && ready(w, 'plasmaCell', EV.plasmaCell.interval, dt)) {
+    const P = EV.plasmaCell, dur = cardLevel(w, 'antibody')?.markDuration ?? 4;
+    for (let i = 0; i < w.enemies.count; i++) {
+      if ((e.x[i] - pl.x) ** 2 + (e.y[i] - pl.y) ** 2 > P.viewRadius ** 2) continue;
+      e.mark[i] = dur;
+      damageEnemy(w, i, P.dropDamage, 'antibody'); // 표식이 붙는 순간 항체 피해
+      if (w.rain.length < P.maxDrops) w.rain.push({ x: e.x[i], y: e.y[i] });
     }
   }
 

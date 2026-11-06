@@ -5,13 +5,14 @@ import { Pool } from './pool';
 import { SpatialHash } from './collision';
 import { updateSpawner, addEnemy, kindOf, BOSS } from './spawner';
 import { type FieldCounts } from './result';
-import { type Card, cardLevel, updateCards, damageEnemy, drawCards, fireShot, nearestEnemies, atkMul, MAX_RADIUS, FLASH_TIME } from './cards';
+import { type Pick, cardLevel, updateCards, damageEnemy, drawCards, fireShot, nearestEnemies, atkMul, MAX_RADIUS, FLASH_TIME } from './cards';
 
 const P = balance.player, S = balance.shot, X = balance.xp, L = balance.levelUp;
 export const ENEMIES = enemies;
 const VIRUS = kindOf('virus'), INFECTED = kindOf('infected');
 const C = balance.cells, B = balance.boss;
 const MINION = kindOf(B.minionId);
+const A = balance.antibiotic, EV = balance.evolutions;
 export const MAX_ENEMIES = 1024;
 
 export interface Vec2 { x: number; y: number }
@@ -29,7 +30,24 @@ export function createWorld() {
     won: false,
     boss: { spawned: false, hp: 0, maxHp: 0, phase2: false },
     shotCount: 0,
-    fx: { shot: 0, hit: 0, pickup: 0, hurt: 0 }, // 이번 프레임 효과음용 횟수
+    bossTime: 0, // 보스 등장 후 지난 시간
+    allOut: false, // 보스전이 길어지면 총공격 (모든 피해 +allOutBonus)
+    // 진화
+    evolved: {} as Record<string, boolean>,
+    evolveLog: [] as string[], // 진화한 순서 (화면 연출용)
+    evoSlow: 0,
+    chains: [] as { x: number; y: number; depth: number; t: number }[], // 고전 경로 연쇄 폭발 예약
+    macroR: balance.cardTuning.orbiterRadius,
+    rain: [] as Vec2[], // 이번 프레임 형질세포 표식 위치
+    // 항생제
+    pills: new Pool(8, ['x', 'y', 'life'] as const),
+    nextPill: A.firstAt,
+    antibioticT: 0, // 효과 남은 시간
+    antibioticUses: 0,
+    noEffectHits: [] as Vec2[],
+    noEffectCd: 0,
+    notes: [] as string[], // 정보 장교에게 말할 거리 (dialogue.officer 키)
+    fx: { shot: 0, hit: 0, pickup: 0, hurt: 0, pill: 0 }, // 이번 프레임 효과음용 횟수
     bossWarn: 0, // >0 이면 보스 등장까지 남은 초 (경고 연출)
     resist: {} as Record<string, number>, // 공격 종류 → 피해 감소율 (보스 내성)
     resistPopCd: 0,
@@ -54,7 +72,7 @@ export function createWorld() {
     result: {} as FieldCounts,
     slowmo: 0, // 레벨업 슬로모션 남은 실시간(초)
     pendingLevels: 0,
-    choosing: null as Card[] | null, // 카드 선택 중이면 게임 정지
+    choosing: null as Pick[] | null, // 카드 선택 중이면 게임 정지
   };
 }
 export type World = ReturnType<typeof createWorld>;
@@ -64,9 +82,15 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
   w.bursts.length = 0;
   w.resistHits.length = 0;
   w.infections.length = 0;
-  w.fx.shot = w.fx.hit = w.fx.pickup = w.fx.hurt = 0;
+  w.fx.shot = w.fx.hit = w.fx.pickup = w.fx.hurt = w.fx.pill = 0;
+  w.rain.length = 0;
+  w.noEffectHits.length = 0;
   if (w.over || w.choosing) return;
   let dt = realDt;
+  if (w.evoSlow > 0) {
+    dt *= L.slowmoScale; // 진화 슬로모션
+    w.evoSlow -= realDt;
+  }
   if (w.slowmo > 0) {
     dt *= L.slowmoScale;
     if ((w.slowmo -= realDt) <= 0) {
@@ -91,6 +115,35 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
   const bossRes = enemies[BOSS].resistance!;
   for (const k in w.resist) w.resist[k] = Math.max(0, w.resist[k] - bossRes.decayPerSec * dt);
   w.resistPopCd -= dt;
+  w.noEffectCd -= dt;
+  w.antibioticT -= dt;
+
+  // 보스전이 길어지면 총공격
+  if (w.boss.spawned && !w.allOut && (w.bossTime += dt) > B.allOutAfter) {
+    w.allOut = true;
+    w.notes.push('allOut');
+  }
+
+  // 항생제: 줍는 순간 세균 피해 증가, 대신 내성균이 생기고 슈퍼버그가 강해진다
+  const pf = w.pills.f;
+  for (let k = w.pills.count - 1; k >= 0; k--) {
+    if ((pf.life[k] -= dt) <= 0) { w.pills.remove(k); continue; }
+    if ((pf.x[k] - pl.x) ** 2 + (pf.y[k] - pl.y) ** 2 > A.pickupRadius ** 2) continue;
+    w.pills.remove(k);
+    w.antibioticT = A.duration;
+    if (++w.antibioticUses === 1) w.notes.push('antibioticTaken');
+    w.fx.pill++;
+    for (let n = 0; n < A.resistantSpawn; n++) {
+      const a = Math.random() * Math.PI * 2;
+      addEnemy(w, MINION, pl.x + Math.cos(a) * A.resistantRing, pl.y + Math.sin(a) * A.resistantRing);
+    }
+    w.bursts.push({ x: pl.x, y: pl.y, r: 2 });
+    if (w.boss.spawned) {
+      const add = enemies[BOSS].hp * A.bossHpPerUse;
+      w.boss.maxHp += add;
+      for (let i = 0; i < w.enemies.count; i++) if (w.enemies.f.kind[i] === BOSS) w.enemies.f.hp[i] += add;
+    }
+  }
 
   // 적: 플레이어 추적. 발열·그물이 느리게 하고, 그물 위에서는 지속 피해.
   const E = w.enemies, e = E.f;
@@ -120,7 +173,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     }
     const dx = tx - e.x[i], dy = ty - e.y[i];
     const d = Math.hypot(dx, dy) || 1;
-    if (e.kind[i] === BOSS && d > S.range) mul *= B.catchUpMul; // 보스는 멀어지면 따라붙는다
+    if (e.kind[i] === BOSS && d > B.catchUpBeyond) mul *= B.catchUpMul; // 보스는 멀어지면 빠르게 따라붙는다
     e.x[i] += (dx / d) * def.speed * mul * dt;
     e.y[i] += (dy / d) * def.speed * mul * dt;
     e.flash[i] -= dt;

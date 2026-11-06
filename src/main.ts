@@ -12,6 +12,7 @@ import { createTitle } from './ui/title';
 import { createStory } from './ui/story';
 import { createResult } from './ui/result';
 import { createRanking } from './ui/ranking';
+import { createCodex, recordCodex } from './ui/codex';
 import { tickFps } from './ui/fps';
 import { unlock, startMusic, toggleMute, soundFrame, sfx } from './audio';
 import balance from './data/balance.json';
@@ -37,6 +38,8 @@ const title = createTitle();
 const story = createStory();
 const result = createResult();
 const ranking = createRanking();
+const codex = createCodex();
+title.onCodex(() => { if (phase === 'title') codex.open(); });
 
 const mutedEl = document.createElement('div');
 mutedEl.id = 'muted';
@@ -80,6 +83,14 @@ addEventListener('keydown', (e) => {
     if (ranking.key(e)) toTitle();
     return;
   }
+  if (codex.isOpen) {
+    codex.key(e);
+    return;
+  }
+  if (phase === 'title' && e.code === 'KeyD') {
+    codex.open();
+    return;
+  }
   if (e.code === 'KeyM') {
     mutedEl.hidden = !toggleMute();
     return;
@@ -108,13 +119,14 @@ let last = performance.now();
 function frame(now: number) {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
-  if (phase === 'title' && (idle += dt) > balance.attract.idleSeconds) startDemo();
+  if (phase === 'title' && !codex.isOpen && (idle += dt) > balance.attract.idleSeconds) startDemo();
   if (phase === 'play') {
     const move = {
       x: +held('ArrowRight', 'KeyD') - +held('ArrowLeft', 'KeyA'),
       y: +held('ArrowDown', 'KeyS') - +held('ArrowUp', 'KeyW'),
     };
     updateWorld(world, dt, move);
+    recordCodex(world);
     if (world.over) {
       phase = 'ending';
       story.reset();

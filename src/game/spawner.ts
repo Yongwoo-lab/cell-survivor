@@ -3,7 +3,7 @@ import balance from '../data/balance.json';
 import enemies from '../data/enemies.json';
 import type { World } from './world';
 
-const S = balance.spawn, C = balance.cells, B = balance.boss;
+const S = balance.spawn, C = balance.cells, B = balance.boss, A = balance.antibiotic;
 export const kindOf = (id: string) => enemies.findIndex((e) => e.id === id);
 const TIMELINE = S.timeline.map((t) => ({ ...t, k: kindOf(t.kind) }));
 export const BOSS = kindOf(B.id);
@@ -57,15 +57,28 @@ export function updateSpawner(w: World, dt: number) {
     }
   }
 
+  // 항생제 알약: firstAt부터 every초마다, life초 뒤 사라짐
+  if (w.time >= w.nextPill) {
+    w.nextPill += A.every;
+    const k = w.pills.add();
+    if (k >= 0) {
+      const p = ring(w, A.spawnMin, A.spawnMax);
+      w.pills.f.x[k] = p.x; w.pills.f.y[k] = p.y; w.pills.f.life[k] = A.life;
+      if (w.nextPill - A.every === A.firstAt) w.notes.push('antibioticSpawn');
+    }
+  }
+
   // 보스: 경고 후 등장
   if (!w.boss.spawned && w.time >= B.at - B.warning) {
     w.bossWarn = B.at - w.time;
     if (w.time >= B.at) {
       // maxEnemies와 상관없이 등장 (풀에 여유가 있다). 실패하면 다음 프레임에 다시.
       const p = ring(w, B.spawnDistance, B.spawnDistance);
-      if (addEnemy(w, BOSS, p.x, p.y) < 0) return;
+      const i = addEnemy(w, BOSS, p.x, p.y);
+      if (i < 0) return;
       w.boss.spawned = true;
-      w.boss.maxHp = enemies[BOSS].hp;
+      // 먹은 항생제마다 체력 +bossHpPerUse
+      w.boss.maxHp = w.enemies.f.hp[i] = enemies[BOSS].hp * (1 + w.antibioticUses * A.bossHpPerUse);
       w.bossWarn = 0;
     }
   }

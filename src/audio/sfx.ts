@@ -74,6 +74,19 @@ export const sfx = {
     tone(o, t, { f0: 70, f1: 24, dur: 1.2, vol: 0.45, at: 0.35 });
     return 2.0;
   }),
+  pill: () => voice('pill', (t, o) => {
+    tone(o, t, { type: 'triangle', f0: 600, f1: 1800, dur: 0.18, vol: 0.12 });
+    noise(o, t, { dur: 0.25, vol: 0.05, filter: 'bandpass', f0: 4000, f1: 1500, q: 3 });
+    return 0.25;
+  }),
+  evolve: () => voice('evolve', (t, o) => {
+    [523.25, 783.99, 1046.5, 1568, 2093].forEach((f, i) => {
+      tone(o, t, { type: 'triangle', f0: f, dur: 1.2, vol: 0.09, at: i * 0.05, attack: 0.02 });
+      tone(o, t, { f0: f * 1.5, dur: 0.6, vol: 0.02, at: 0.3 + i * 0.05 });
+    });
+    noise(o, t, { dur: 1.0, vol: 0.06, filter: 'highpass', f0: 6000, attack: 0.05 });
+    return 1.4;
+  }),
   act: () => voice('act', (t, o) => {
     tone(o, t, { f0: 55, f1: 49, dur: 2.4, vol: 0.4, attack: 0.5 });
     tone(o, t, { f0: 82.4, f1: 73.4, dur: 2.2, vol: 0.14, attack: 0.6 });

@@ -51,7 +51,7 @@
   {
     "id": "superbug",
     "name": "슈퍼버그",
-    "hp": 500,
+    "hp": 600,
     "speed": 0.8,
     "damage": 20,
     "xp": 50,
@@ -73,6 +73,7 @@
     "damage": 6,
     "xp": 2,
     "color": "#ff3b3b",
+    "science": "항생제에서 살아남은 세균의 자손이라 같은 항생제가 잘 듣지 않는다.",
     "radius": 0.3,
     "spawnCount": 0
   }

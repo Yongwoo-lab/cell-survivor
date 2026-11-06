@@ -113,7 +113,10 @@
     "minionCount": 6,
     "minionRing": 2.5,
     "spawnDistance": 15,
-    "catchUpMul": 2.5
+    "catchUpMul": 3,
+    "allOutAfter": 50,
+    "allOutBonus": 0.5,
+    "catchUpBeyond": 6
   },
   "levelUp": {
     "slowmoTime": 0.3,
@@ -139,5 +142,51 @@
   "attract": {
     "idleSeconds": 30,
     "pickDelay": 1.2
+  },
+  "evolutions": {
+    "slowmoTime": 0.6,
+    "classical": {
+      "chainDelay": 0.15,
+      "chainDepth": 3,
+      "chainBranch": 4,
+      "chainDamageMul": 1.0
+    },
+    "activatedMacrophage": {
+      "extraCount": 2,
+      "sizeMul": 2,
+      "damageMul": 2,
+      "pullRadiusMul": 2.5,
+      "pullSpeed": 6
+    },
+    "plasmaCell": {
+      "interval": 1.0,
+      "viewRadius": 16,
+      "maxDrops": 80,
+      "dropDamage": 3
+    }
+  },
+  "antibiotic": {
+    "firstAt": 40,
+    "every": 25,
+    "life": 15,
+    "spawnMin": 6,
+    "spawnMax": 14,
+    "pickupRadius": 1.1,
+    "duration": 10,
+    "damageMul": 3,
+    "bacteria": [
+      "coccus",
+      "bacillus",
+      "resistantCoccus"
+    ],
+    "noEffect": [
+      "virus"
+    ],
+    "resistantSpawn": 3,
+    "resistantRing": 6,
+    "bossReductionPerUse": 0.1,
+    "bossReductionMax": 0.6,
+    "bossHpPerUse": 0.1,
+    "popupInterval": 0.3
   }
 }

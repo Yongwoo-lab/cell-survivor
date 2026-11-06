@@ -1,7 +1,7 @@
 import fields from '../data/fields.json';
 import dialogue from '../data/dialogue.json';
 import type { World } from '../game/world';
-import type { Card } from '../game/cards';
+import { type Pick, isEvolution } from '../game/cards';
 
 const fieldName = Object.fromEntries(fields.map((f) => [f.id, f.name]));
 
@@ -11,7 +11,7 @@ export function createCardPicker(onPick: (i: number) => void) {
   root.id = 'picker';
   root.hidden = true;
   document.body.appendChild(root);
-  let shown: Card[] | null = null;
+  let shown: Pick[] | null = null;
 
   addEventListener('keydown', (e) => {
     const i = ['Digit1', 'Digit2', 'Digit3', 'Numpad1', 'Numpad2', 'Numpad3'].indexOf(e.code) % 3;
@@ -28,14 +28,16 @@ export function createCardPicker(onPick: (i: number) => void) {
     root.hidden = !shown;
     if (!shown) return;
     root.innerHTML = `<h2>${dialogue.ui.levelUp}</h2><div class="hand">${shown.map((c, i) => {
-      const cur = w.cards[c.id] ?? 0;
-      return `<button class="card" data-i="${i}" style="--delay:${i * 0.12}s">
+      const evo = isEvolution(c);
+      const cur = w.cards[c.id] ?? 0, max = evo ? 1 : c.levels.length;
+      const lv = evo ? dialogue.ui.evolution : cur ? `${cur}/${max} → ${cur + 1}/${max}` : `${dialogue.ui.newCard} · 1/${max}`;
+      return `<button class="card${evo ? ' evo' : ''}" data-i="${i}" style="--delay:${i * 0.12}s">
         <div class="face">
           <span class="tag">${fieldName[c.field] ?? c.field}</span>
           <h3>${c.name}</h3>
           <p class="effect">${c.effect}</p>
           <p class="sci">${c.science}</p>
-          <div class="foot"><span class="lv">${cur ? `${cur}/${c.levels.length} → ${cur + 1}/${c.levels.length}` : `${dialogue.ui.newCard} · 1/${c.levels.length}`}</span><kbd>${i + 1}</kbd></div>
+          <div class="foot"><span class="lv">${lv}</span><kbd>${i + 1}</kbd></div>
         </div>
         <div class="back"></div>
       </button>`;
