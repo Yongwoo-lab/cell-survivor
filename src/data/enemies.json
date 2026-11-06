@@ -51,7 +51,7 @@
   {
     "id": "superbug",
     "name": "슈퍼버그",
-    "hp": 1500,
+    "hp": 350,
     "speed": 0.8,
     "damage": 20,
     "xp": 50,

@@ -3,12 +3,14 @@ import enemies from '../data/enemies.json';
 import balance from '../data/balance.json';
 import { Pool } from './pool';
 import { SpatialHash } from './collision';
-import { updateSpawner } from './spawner';
+import { updateSpawner, addEnemy, kindOf, BOSS } from './spawner';
 import { type FieldCounts } from './result';
 import { type Card, cardLevel, updateCards, damageEnemy, drawCards, fireShot, nearestEnemies, atkMul, MAX_RADIUS, FLASH_TIME } from './cards';
 
 const P = balance.player, S = balance.shot, X = balance.xp, L = balance.levelUp;
 export const ENEMIES = enemies;
+const VIRUS = kindOf('virus'), INFECTED = kindOf('infected');
+const C = balance.cells;
 export const MAX_ENEMIES = 1024;
 
 export interface Vec2 { x: number; y: number }
@@ -18,7 +20,19 @@ export function createWorld() {
     time: 0,
     over: false,
     player: { x: 0, y: 0, hp: P.hp, maxHp: P.hp, invuln: 0, xp: 0, level: 1, xpToNext: X.base },
-    enemies: new Pool(MAX_ENEMIES, ['x', 'y', 'hp', 'flash', 'id', 'kind', 'mark', 'macroCd'] as const),
+    // silent: 처치가 아니라 사라짐 (바이러스가 세포에 들어감) → 조각·처치 수 없음
+    enemies: new Pool(MAX_ENEMIES, ['x', 'y', 'hp', 'flash', 'id', 'kind', 'mark', 'macroCd', 'spawnCd', 'silent'] as const),
+    cells: new Pool(64, ['x', 'y'] as const), // 움직이지 않는 정상 세포 (2막~)
+    cellsPlaced: false,
+    act: 0,
+    won: false,
+    boss: { spawned: false, hp: 0, maxHp: 0 },
+    bossWarn: 0, // >0 이면 보스 등장까지 남은 초 (경고 연출)
+    resist: {} as Record<string, number>, // 공격 종류 → 피해 감소율 (보스 내성)
+    resistPopCd: 0,
+    resistHits: [] as Vec2[], // 이번 프레임 "내성!" 표시 위치
+    infections: [] as Vec2[], // 이번 프레임 감염된 세포 위치
+    seen: [] as number[], // 처음 등장한 적 종류 순서 (정보 장교 대사)
     shots: new Pool(512, ['x', 'y', 'vx', 'vy', 'life', 'kind'] as const), // kind 0 기본, 1 항체
     gems: new Pool(2048, ['x', 'y', 'xp', 'pulled'] as const),
     nets: new Pool(16, ['x', 'y', 'life', 'maxLife', 'radius'] as const),
@@ -28,7 +42,7 @@ export function createWorld() {
     deaths: [] as { x: number; y: number; kind: number }[],
     bursts: [] as { x: number; y: number; r: number }[],
     hash: new SpatialHash(MAX_ENEMIES),
-    spawnAcc: 0,
+    spawnAcc: enemies.map(() => 0),
     fireCd: S.interval,
     nextId: 0,
     cards: {} as Record<string, number>, // 카드 id → 단계
@@ -45,6 +59,8 @@ export type World = ReturnType<typeof createWorld>;
 export function updateWorld(w: World, realDt: number, move: Vec2) {
   w.deaths.length = 0;
   w.bursts.length = 0;
+  w.resistHits.length = 0;
+  w.infections.length = 0;
   if (w.over || w.choosing) return;
   let dt = realDt;
   if (w.slowmo > 0) {
@@ -64,7 +80,13 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
   pl.y += (move.y / len) * speed * dt;
   pl.invuln -= dt;
 
+  while (w.act + 1 < balance.acts.length && w.time >= balance.acts[w.act + 1].start) w.act++;
   updateSpawner(w, dt);
+
+  // 보스 내성은 시간이 지나면 회복
+  const bossRes = enemies[BOSS].resistance!;
+  for (const k in w.resist) w.resist[k] = Math.max(0, w.resist[k] - bossRes.decayPerSec * dt);
+  w.resistPopCd -= dt;
 
   // 적: 플레이어 추적. 발열·그물이 느리게 하고, 그물 위에서는 지속 피해.
   const E = w.enemies, e = E.f;
@@ -76,16 +98,43 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     if (nt) for (let k = 0; k < w.nets.count; k++) {
       if ((e.x[i] - n.x[k]) ** 2 + (e.y[i] - n.y[k]) ** 2 > n.radius[k] ** 2) continue;
       mul *= 1 - nt.slow;
-      damageEnemy(w, i, nt.dps * dt, false);
+      damageEnemy(w, i, nt.dps * dt, 'net', false, dt);
       break;
     }
-    const dx = pl.x - e.x[i], dy = pl.y - e.y[i];
+    let tx = pl.x, ty = pl.y;
+    if (e.kind[i] === VIRUS) {
+      // 가까운 정상 세포가 있으면 세포를 노린다
+      let bd = C.virusSeekRange ** 2;
+      for (let k = 0; k < w.cells.count; k++) {
+        const d2 = (w.cells.f.x[k] - e.x[i]) ** 2 + (w.cells.f.y[k] - e.y[i]) ** 2;
+        if (d2 < bd) { bd = d2; tx = w.cells.f.x[k]; ty = w.cells.f.y[k]; }
+      }
+    }
+    if (e.kind[i] === INFECTED && (e.spawnCd[i] -= dt) <= 0) {
+      e.spawnCd[i] = def.spawnVirusEvery!;
+      if (E.count < balance.spawn.maxEnemies) addEnemy(w, VIRUS, e.x[i] + (Math.random() - 0.5), e.y[i] + (Math.random() - 0.5));
+    }
+    const dx = tx - e.x[i], dy = ty - e.y[i];
     const d = Math.hypot(dx, dy) || 1;
     e.x[i] += (dx / d) * def.speed * mul * dt;
     e.y[i] += (dy / d) * def.speed * mul * dt;
     e.flash[i] -= dt;
     e.mark[i] -= dt;
     e.macroCd[i] -= dt;
+  }
+  // 바이러스가 정상 세포에 닿으면 세포가 감염세포로 바뀐다
+  const cf = w.cells.f, hitCell = C.radius + enemies[VIRUS].radius;
+  for (let i = 0; i < E.count; i++) {
+    if (e.kind[i] !== VIRUS || e.hp[i] <= 0) continue;
+    for (let k = 0; k < w.cells.count; k++) {
+      if ((cf.x[k] - e.x[i]) ** 2 + (cf.y[k] - e.y[i]) ** 2 > hitCell * hitCell) continue;
+      e.hp[i] = 0;
+      e.silent[i] = 1;
+      addEnemy(w, INFECTED, cf.x[k], cf.y[k]);
+      w.infections.push({ x: cf.x[k], y: cf.y[k] });
+      w.cells.remove(k);
+      break;
+    }
   }
   w.hash.build(e.x, e.y, E.count);
 
@@ -128,7 +177,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
       if (s.kind[k] === 1) {
         if (ab) e.mark[i] = ab.markDuration;
         e.flash[i] = FLASH_TIME;
-      } else damageEnemy(w, i, S.damage);
+      } else damageEnemy(w, i, S.damage, 'shot');
       return (hit = true);
     });
     if (hit || s.life[k] <= 0) SH.remove(k);
@@ -152,6 +201,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
   for (let i = E.count - 1; i >= 0; i--) {
     if (e.hp[i] > 0) continue;
     const kind = e.kind[i];
+    if (e.silent[i]) { E.remove(i); continue; }
     w.deaths.push({ x: e.x[i], y: e.y[i], kind });
     w.kills[kind]++;
     const g = w.gems.add();
@@ -160,6 +210,14 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
       gf.x[g] = e.x[i]; gf.y[g] = e.y[i]; gf.xp[g] = enemies[kind].xp; gf.pulled[g] = 0;
     }
     E.remove(i);
+  }
+
+  // 보스 체력 (화면 표시용), 보스를 잡으면 승리
+  if (w.boss.spawned) {
+    let hp = 0;
+    for (let i = 0; i < E.count; i++) if (e.kind[i] === BOSS) hp = e.hp[i];
+    w.boss.hp = hp;
+    if (hp <= 0) w.won = w.over = true;
   }
 
   // 항원 조각: 가까우면 자석처럼 끌려와 흡수

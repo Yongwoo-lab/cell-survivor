@@ -1,9 +1,10 @@
 // 밸런스 봇: 카드를 무작위로 고르며 N판을 돌려 생존 시간·레벨을 낸다.
-// 실행: npm run sim [-- 판수]
+// 실행: npm run sim [-- 판수 [봇이름]]
 import { createServer } from 'vite';
 
 const RUNS = Number(process.argv[2] ?? 40);
-const GOAL = 150; // 보스 등장 2:30
+const BOSS_AT = 150; // 보스 등장 2:30
+const LIMIT = 360; // 보스를 못 잡으면 6분에서 끊는다
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 const { createWorld, updateWorld } = await vite.ssrLoadModule('/src/game/world.ts');
 const { selectCard } = await vite.ssrLoadModule('/src/game/cards.ts');
@@ -18,7 +19,7 @@ function play(bot) {
   const w = createWorld();
   let move = { x: 0, y: 0 }, think = 0, wanderDir = { x: 1, y: 0 };
   const dt = 1 / 60;
-  while (!w.over && w.time < GOAL) {
+  while (!w.over && w.time < LIMIT) {
     if (w.choosing) selectCard(w, Math.floor(Math.random() * w.choosing.length));
     if ((think -= dt) <= 0) {
       think = bot.react;
@@ -45,13 +46,16 @@ function play(bot) {
     }
     updateWorld(w, dt, move);
   }
-  return { time: w.time, level: w.player.level, survived: !w.over, hp: w.player.hp, enemies: w.enemies.count };
+  return { time: w.time, level: w.player.level, reached: w.time >= BOSS_AT, won: w.won, bossHpLeft: w.boss.maxHp ? w.boss.hp / w.boss.maxHp : 1 };
 }
 
-for (const [name, bot] of Object.entries(BOTS)) {
+for (const [name, bot] of Object.entries(BOTS).filter(([n]) => !process.argv[3] || n === process.argv[3])) {
   const rs = Array.from({ length: RUNS }, () => play(bot));
   const avg = (f) => (rs.reduce((a, r) => a + f(r), 0) / rs.length).toFixed(1);
-  const deaths = rs.filter((r) => !r.survived).map((r) => r.time.toFixed(0)).sort((a, b) => a - b);
-  console.log(`${name.padEnd(8)} survive ${rs.filter((r) => r.survived).length}/${RUNS}  avgTime ${avg((r) => r.time)}s  avgLv ${avg((r) => r.level)}  avgHpLeft ${avg((r) => r.hp)}  enemiesAt150 ${avg((r) => r.enemies)}  deaths@ [${deaths.join(' ')}]`);
+  const pct = (f) => `${Math.round((rs.filter(f).length / RUNS) * 100)}%`;
+  const deaths = rs.filter((r) => !r.reached).map((r) => r.time.toFixed(0)).sort((a, b) => a - b);
+  const wins = rs.filter((r) => r.won);
+  console.log(`${name.padEnd(8)} reachBoss ${pct((r) => r.reached)}  killBoss ${pct((r) => r.won)}  avgTime ${avg((r) => r.time)}s  avgLv ${avg((r) => r.level)}`
+    + `  winTime ${wins.length ? (wins.reduce((a, r) => a + r.time, 0) / wins.length).toFixed(0) : '-'}s  bossHpLeft(lost) ${avg((r) => (r.won ? 0 : r.bossHpLeft))}  earlyDeaths@ [${deaths.join(' ')}]`);
 }
 await vite.close();

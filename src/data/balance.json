@@ -22,9 +22,91 @@
   },
   "spawn": {
     "distance": 24,
-    "startPerSec": 1.0,
-    "growthPerSec": 0.025,
-    "maxEnemies": 500
+    "maxEnemies": 500,
+    "_comment": "초당 등장 수 = startPerSec + growthPerSec × (현재 시각 - from), from ≤ 시각 < to",
+    "timeline": [
+      {
+        "kind": "coccus",
+        "from": 0,
+        "to": 60,
+        "startPerSec": 1.0,
+        "growthPerSec": 0.025
+      },
+      {
+        "kind": "bacillus",
+        "from": 30,
+        "to": 60,
+        "startPerSec": 0.4,
+        "growthPerSec": 0.01
+      },
+      {
+        "kind": "coccus",
+        "from": 60,
+        "to": 120,
+        "startPerSec": 0.8,
+        "growthPerSec": 0
+      },
+      {
+        "kind": "virus",
+        "from": 60,
+        "to": 120,
+        "startPerSec": 0.8,
+        "growthPerSec": 0.015
+      },
+      {
+        "kind": "coccus",
+        "from": 120,
+        "to": 9999,
+        "startPerSec": 1.0,
+        "growthPerSec": 0.015
+      },
+      {
+        "kind": "bacillus",
+        "from": 120,
+        "to": 9999,
+        "startPerSec": 0.35,
+        "growthPerSec": 0.008
+      },
+      {
+        "kind": "virus",
+        "from": 120,
+        "to": 9999,
+        "startPerSec": 0.35,
+        "growthPerSec": 0.008
+      }
+    ]
+  },
+  "acts": [
+    {
+      "id": "vessel",
+      "start": 0
+    },
+    {
+      "id": "lung",
+      "start": 60
+    },
+    {
+      "id": "lymph",
+      "start": 120
+    }
+  ],
+  "cells": {
+    "fromAct": "lung",
+    "count": 18,
+    "radius": 0.7,
+    "spawnMin": 8,
+    "spawnMax": 28,
+    "refillMin": 24,
+    "refillMax": 32,
+    "despawn": 45,
+    "virusSeekRange": 10
+  },
+  "boss": {
+    "id": "superbug",
+    "at": 150,
+    "warning": 4,
+    "resistPopupThreshold": 0.15,
+    "resistPopupInterval": 0.25
   },
   "levelUp": {
     "slowmoTime": 0.3,
@@ -37,6 +119,7 @@
     "nkSpeed": 14,
     "nkReturnSpeed": 9,
     "nkHomeRadius": 1.8,
-    "antibodyShotSpeed": 14
+    "antibodyShotSpeed": 14,
+    "complementSplashRatio": 0.6
   }
 }

@@ -4,46 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cell Survivor</title>
-    <style>
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #021417; }
-      canvas { display: block; }
-      #hud { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); width: min(420px, 60vw); font: 13px system-ui, sans-serif; color: #dff; pointer-events: none; }
-      .bar { height: 10px; margin-bottom: 6px; background: rgba(0, 30, 35, 0.6); border: 1px solid rgba(120, 240, 230, 0.35); border-radius: 6px; overflow: hidden; }
-      .bar i { display: block; height: 100%; width: 0; transition: width 0.12s; }
-      .hp i { background: linear-gradient(90deg, #2fd6c6, #bffcff); box-shadow: 0 0 8px #3ff2e6; }
-      .xp { height: 8px; }
-      .xp i { background: linear-gradient(90deg, #ffb347, #ffe08a); }
-      .lv { display: block; text-align: right; font-size: 11px; opacity: 0.8; }
-      #over { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; background: rgba(5, 0, 15, 0.6); font-size: 22px; }
-      #over[hidden] { display: none; }
-      #over small { opacity: 0.7; font-size: 14px; margin-top: 8px; }
-      #fever { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.6s;
-        background: radial-gradient(ellipse at center, transparent 55%, rgba(255, 70, 40, 0.35) 100%); animation: fever 2.4s ease-in-out infinite; }
-      @keyframes fever { 50% { filter: brightness(1.4); } }
-      #picker { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-        background: radial-gradient(ellipse at center, rgba(4, 40, 44, 0.55), rgba(8, 2, 20, 0.85)); font-family: system-ui, sans-serif; color: #e6ffff; }
-      #picker[hidden] { display: none; }
-      #picker h2 { margin: 0; font-size: 30px; letter-spacing: 0.08em; color: #bffcff; text-shadow: 0 0 18px #3ff2e6; }
-      .hand { display: flex; gap: 20px; perspective: 1200px; }
-      .card { position: relative; width: 230px; height: 320px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer;
-        transform-style: preserve-3d; animation: flip 0.55s cubic-bezier(.2, .8, .3, 1.2) var(--delay) both; transition: translate 0.15s; }
-      .card:hover { translate: 0 -8px; }
-      @keyframes flip { from { transform: rotateY(180deg) scale(0.85); } to { transform: rotateY(0) scale(1); } }
-      .face, .back { position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden; box-sizing: border-box; }
-      .face { display: flex; flex-direction: column; gap: 10px; padding: 18px 16px 14px; text-align: left;
-        background: linear-gradient(160deg, rgba(20, 80, 86, 0.92), rgba(24, 14, 52, 0.95));
-        border: 1px solid rgba(120, 245, 235, 0.45); box-shadow: 0 0 24px rgba(63, 242, 230, 0.25), inset 0 0 30px rgba(63, 242, 230, 0.08); }
-      .card:hover .face { border-color: #bffcff; box-shadow: 0 0 34px rgba(63, 242, 230, 0.55); }
-      .back { transform: rotateY(180deg); border: 1px solid rgba(120, 245, 235, 0.3);
-        background: radial-gradient(circle at 50% 45%, rgba(63, 242, 230, 0.45), transparent 35%), repeating-radial-gradient(circle at 50% 45%, #0c3a40 0 6px, #140a2c 6px 12px); }
-      .tag { align-self: flex-start; padding: 2px 9px; border-radius: 99px; font-size: 11px; background: rgba(176, 156, 255, 0.22); border: 1px solid rgba(176, 156, 255, 0.6); color: #dcd2ff; }
-      .card h3 { margin: 0; font-size: 20px; color: #fff; }
-      .effect { margin: 0; font-size: 14px; line-height: 1.45; }
-      .sci { margin: 0; font-size: 12px; line-height: 1.45; opacity: 0.7; border-top: 1px solid rgba(120, 245, 235, 0.2); padding-top: 8px; }
-      .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #ffe08a; }
-      kbd { padding: 1px 8px; border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.4); font: 12px monospace; color: #fff; }
-      #fps { position: fixed; top: 8px; left: 8px; font: 14px monospace; color: #9ff; pointer-events: none; }
-    </style>
   </head>
   <body>
     <div id="fps"></div>

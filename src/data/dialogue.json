@@ -19,5 +19,24 @@
   ],
   "ending": "덕분에 새내기는 무사히 기말고사를 치렀습니다.",
   "gameOver": "새내기가 몸살로 쓰러졌습니다… 다시 도전해 볼까요?",
-  "disclaimer": "게임을 위해 생명과학 개념을 단순화했어요. 실제로는 훨씬 더 정교하게 작동해요."
+  "disclaimer": "게임을 위해 생명과학 개념을 단순화했어요. 실제로는 훨씬 더 정교하게 작동해요.",
+  "acts": [
+    { "id": "vessel", "title": "1막 · 혈관", "line": "상처 틈으로 세균이 혈관에 들어왔다!" },
+    { "id": "lung", "title": "2막 · 폐", "line": "감기 바이러스가 폐로 번지고 있다. 세포가 감염되기 전에 막아라!" },
+    { "id": "lymph", "title": "3막 · 림프절", "line": "마지막 방어선, 림프절. 무언가 거대한 것이 다가온다…" }
+  ],
+  "ui": {
+    "title": "Cell Survivor",
+    "pressStart": "아무 키나 눌러 시작",
+    "levelUp": "레벨 업!",
+    "newCard": "NEW",
+    "resist": "내성!",
+    "bossWarning": "WARNING",
+    "resultTime": "생존 시간",
+    "resultKills": "처치",
+    "resultLevel": "레벨",
+    "resultCards": "이번 판에 고른 카드",
+    "resultCourses": "관련 과목",
+    "backToTitle": "Enter / R · 타이틀로"
+  }
 }

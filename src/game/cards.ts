@@ -23,8 +23,11 @@ export function cardLevel(w: World, id: string): Lv | undefined {
 export const atkMul = (w: World) => 1 + (cardLevel(w, 'cytokine')?.attackSpeed ?? 0);
 
 // 최대 단계에 도달하지 않은 카드 중 무작위 3장
+// 선행 카드: 보체는 항체 표식이 있어야 의미가 있다
+const REQUIRES: Record<string, string> = { complement: 'antibody' };
+
 export function drawCards(w: World): Card[] {
-  const pool = cards.filter((c) => (w.cards[c.id] ?? 0) < c.levels.length);
+  const pool = cards.filter((c) => (w.cards[c.id] ?? 0) < c.levels.length && (!REQUIRES[c.id] || w.cards[REQUIRES[c.id]]));
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -41,11 +44,24 @@ export function selectCard(w: World, idx: number) {
   if (--w.pendingLevels > 0) w.slowmo = balance.levelUp.slowmoTime;
 }
 
-// 표식(항체)·기억세포 보너스가 모든 공격에 곱해진다
-export function damageEnemy(w: World, i: number, amount: number, flash = true) {
+export type Source = 'shot' | 'macrophage' | 'net' | 'complement' | 'nk';
+
+// 표식(항체)·기억세포 보너스가 모든 공격에 곱해진다.
+// 내성이 있는 적(보스)은 같은 공격 종류를 맞을수록 그 종류의 피해가 줄어든다. stack: 지속 피해는 dt만큼만 쌓임.
+export function damageEnemy(w: World, i: number, amount: number, src: Source, flash = true, stack = 1) {
   const e = w.enemies.f;
   if (e.hp[i] <= 0) return;
   let mult = 1;
+  const res = enemies[e.kind[i]].resistance;
+  if (res) {
+    const r = w.resist[src] ?? 0;
+    amount *= 1 - r;
+    w.resist[src] = Math.min(res.maxReduction, r + res.perHitStack * stack);
+    if (r >= balance.boss.resistPopupThreshold && w.resistPopCd <= 0) {
+      w.resistHits.push({ x: e.x[i], y: e.y[i] });
+      w.resistPopCd = balance.boss.resistPopupInterval;
+    }
+  }
   const ab = cardLevel(w, 'antibody');
   if (ab && e.mark[i] > 0) mult += ab.markBonus;
   const mem = cardLevel(w, 'memory');
@@ -113,7 +129,7 @@ export function updateCards(w: World, dt: number) {
       w.hash.query(x, y, T.orbiterRadius + MAX_RADIUS, (i) => {
         const r = T.orbiterRadius + RADIUS[e.kind[i]];
         if (e.macroCd[i] > 0 || (e.x[i] - x) ** 2 + (e.y[i] - y) ** 2 > r * r) return;
-        damageEnemy(w, i, mc.damage);
+        damageEnemy(w, i, mc.damage, 'macrophage');
         e.macroCd[i] = T.macroHitInterval;
       });
     }
@@ -146,10 +162,10 @@ export function updateCards(w: World, dt: number) {
         w.timers.complement = cp.cooldown / atkMul(w);
         for (const i of marked) {
           const x = e.x[i], y = e.y[i];
-          damageEnemy(w, i, cp.burstDamage);
+          damageEnemy(w, i, cp.burstDamage, 'complement');
           w.hash.query(x, y, cp.splashRadius + MAX_RADIUS, (j) => {
             const r = cp.splashRadius + RADIUS[e.kind[j]];
-            if (j !== i && (e.x[j] - x) ** 2 + (e.y[j] - y) ** 2 <= r * r) damageEnemy(w, j, cp.burstDamage);
+            if (j !== i && (e.x[j] - x) ** 2 + (e.y[j] - y) ** 2 <= r * r) damageEnemy(w, j, cp.burstDamage * T.complementSplashRatio, 'complement');
           });
           e.mark[i] = 0;
           w.bursts.push({ x, y, r: cp.splashRadius });
@@ -181,7 +197,7 @@ export function updateCards(w: World, dt: number) {
         u.x[k] += (dx / d) * step; u.y[k] += (dy / d) * step;
       }
       if (u.cd[k] <= 0 && target >= 0 && d < T.nkRadius + RADIUS[e.kind[target]]) {
-        damageEnemy(w, target, nk.damage);
+        damageEnemy(w, target, nk.damage, 'nk');
         u.cd[k] = nk.cooldown / atkMul(w);
         target = -2; // 다음 NK는 새로 고른다 (같은 적이어도 됨)
       }

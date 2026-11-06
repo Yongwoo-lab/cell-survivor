@@ -2,12 +2,15 @@ import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import balance from '../data/balance.json';
 import cards from '../data/cards.json';
+import dialogue from '../data/dialogue.json';
 import { ENEMIES, MAX_ENEMIES, type World } from '../game/world';
 import { glassy, time } from './materials';
-import { createParticles, createShockwaves } from './effects';
+import { createParticles, createShockwaves, createPopups } from './effects';
 
 const COCCUS = ENEMIES.find((e) => e.id === 'coccus')!;
-const T = balance.cardTuning;
+const T = balance.cardTuning, CELL = balance.cells;
+const BOSS = ENEMIES.findIndex((e) => e.id === balance.boss.id);
+const BACILLUS = ENEMIES.findIndex((e) => e.id === 'bacillus');
 
 // 게임 (x, y) → 화면 (x, z)
 function createPlayerMesh() {
@@ -88,23 +91,90 @@ function webTexture() {
   return new THREE.CanvasTexture(c);
 }
 
+// 막대균: 이동 방향(x축)으로 긴 캡슐
+const bacillusGeometry = (r: number) => new THREE.CapsuleGeometry(r * 0.5, r * 2.2, 6, 12).rotateZ(Math.PI / 2);
+
+// 정이십면체 꼭짓점 방향 (중복 제거)
+function icoDirs(detail: number) {
+  const pos = new THREE.IcosahedronGeometry(1, detail).attributes.position;
+  const seen = new Map<string, THREE.Vector3>();
+  for (let i = 0; i < pos.count; i++) {
+    const v = new THREE.Vector3().fromBufferAttribute(pos, i);
+    seen.set(v.toArray().map((n) => n.toFixed(3)).join(), v);
+  }
+  return [...seen.values()];
+}
+
+// 바이러스: 작은 껍질 + 돌기 12개
+function virusGeometry(r: number) {
+  const parts = [new THREE.IcosahedronGeometry(r * 0.7, 1)];
+  for (const d of icoDirs(0)) parts.push(new THREE.IcosahedronGeometry(r * 0.22, 0).translate(d.x * r, d.y * r, d.z * r));
+  return mergeGeometries(parts);
+}
+
+// 슈퍼버그: 울퉁불퉁한 몸통 + 가시 42개
+function bossGeometry(r: number) {
+  const body = new THREE.IcosahedronGeometry(r * 0.85, 4);
+  body.deleteAttribute('uv');
+  const bump = (v: THREE.Vector3) => 1 + 0.08 * Math.sin(v.x * 3.1) * Math.sin(v.y * 2.7 + 1) * Math.sin(v.z * 3.3 + 2);
+  const pos = body.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    pos.setXYZ(i, v.x * bump(v), v.y * bump(v), v.z * bump(v));
+  }
+  const parts: THREE.BufferGeometry[] = [mergeVertices(body)];
+  const Y = new THREE.Vector3(0, 1, 0);
+  for (const d of icoDirs(1)) {
+    const cone = new THREE.ConeGeometry(r * 0.08, r * 0.45, 6).translate(0, r * 0.95, 0);
+    cone.deleteAttribute('uv');
+    parts.push(cone.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(Y, d)));
+  }
+  parts[0].computeVertexNormals();
+  return mergeGeometries(parts);
+}
+
 const VARIANTS = [3, 4, 5, 6];
 const LOOKS = 256; // 개체별 회전·크기는 id로 이 표에서 고른다 (swap 삭제에도 모습 유지)
 
-export function createView(scene: THREE.Scene) {
+export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   const player = createPlayerMesh();
   scene.add(player);
 
   // 적: 재질은 흰색, 실제 색은 인스턴스 색 (번쩍임 = 밝은 흰색으로 교체)
   const kindColors = ENEMIES.map((d) => new THREE.Color(d.color));
-  const enemyColor = kindColors[0];
   const flashColor = new THREE.Color(4, 4, 4);
   const enemyMat = glassy({
     color: 0xffffff, opacity: 0.55, rim: 0xffb36b, rimStrength: 0.7,
     emissive: 0x401200, emissiveIntensity: 0.6, depthWrite: true,
   });
-  const enemyMeshes = VARIANTS.map((k) => instanced(clusterGeometry(k, COCCUS.radius), enemyMat, MAX_ENEMIES, enemyColor));
-  scene.add(...enemyMeshes);
+  const infectedMat = glassy({
+    color: 0xffffff, opacity: 0.45, rim: 0xd08cff, rimStrength: 0.9, emissive: 0x200830, wobble: 0.05, depthWrite: true,
+  });
+  const bossMat = glassy({
+    color: 0xffffff, opacity: 0.75, rim: 0xff7080, rimStrength: 1.1, emissive: 0x300006, wobble: 0.1, depthWrite: true,
+  });
+  // 종류마다 InstancedMesh 묶음 (구균은 포도송이 모양 4가지)
+  const kindMeshes = ENEMIES.map((d) => {
+    const geos =
+      d.id === 'coccus' ? VARIANTS.map((k) => clusterGeometry(k, d.radius))
+      : d.id === 'bacillus' ? [bacillusGeometry(d.radius)]
+      : d.id === 'virus' ? [virusGeometry(d.radius)]
+      : d.id === 'superbug' ? [bossGeometry(d.radius)]
+      : [new THREE.SphereGeometry(d.radius, 32, 20)];
+    const mat = d.id === 'superbug' ? bossMat : d.id === 'infected' ? infectedMat : enemyMat;
+    return geos.map((g) => instanced(g, mat, d.id === 'superbug' ? 4 : MAX_ENEMIES, kindColors[0]));
+  });
+  scene.add(...kindMeshes.flat());
+
+  // 정상 세포: 연분홍 막 + 핵
+  const cellMem = instanced(new THREE.SphereGeometry(CELL.radius, 32, 20), glassy({
+    color: 0x8a4a5e, opacity: 0.22, rim: 0xffb0c8, rimStrength: 0.7, wobble: 0.04,
+  }), 64);
+  cellMem.renderOrder = 1;
+  const cellNuc = instanced(new THREE.SphereGeometry(CELL.radius * 0.38, 16, 12), glassy({
+    color: 0x5a2a4a, opacity: 0.8, rim: 0xd080a0, rimStrength: 0.5, depthWrite: true,
+  }), 64);
+  scene.add(cellMem, cellNuc);
   const looks = Array.from({ length: LOOKS }, () => ({
     axis: new THREE.Vector3().randomDirection(),
     phase: Math.random() * Math.PI * 2,
@@ -146,11 +216,13 @@ export function createView(scene: THREE.Scene) {
   scene.add(shotMesh, abShotMesh, gemMesh, markMesh, macroMesh, nkMesh, netMesh);
   const particles = createParticles(scene);
   const shocks = createShockwaves(scene);
+  const popups = createPopups(scene, camera, dialogue.ui.resist);
+  const infectColor = new THREE.Color(0xd65cff);
   const netColor = new THREE.Color(0xbffcff), tmpColor = new THREE.Color();
 
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
   const UP = new THREE.Vector3(0, 1, 0);
-  const counts = VARIANTS.map(() => 0);
+  const counts = kindMeshes.map((ms) => ms.map(() => 0));
 
   return {
     player,
@@ -161,29 +233,43 @@ export function createView(scene: THREE.Scene) {
       player.visible = w.player.invuln <= 0 || Math.floor(t * 20) % 2 === 0;
 
       const e = w.enemies.f;
-      counts.fill(0);
+      for (const c of counts) c.fill(0);
       let marks = 0;
       for (let i = 0; i < w.enemies.count; i++) {
-        const id = e.id[i], v = id % VARIANTS.length, j = counts[v]++;
+        const id = e.id[i], kind = e.kind[i], def = ENEMIES[kind];
+        const ms = kindMeshes[kind], v = id % ms.length, j = counts[kind][v]++;
         const look = looks[id % LOOKS];
-        p.set(e.x[i], 0.4 + Math.sin(t * 2 + id) * 0.15, e.y[i]);
-        q.setFromAxisAngle(look.axis, look.phase + t * look.spin);
-        s.setScalar(look.scale);
-        enemyMeshes[v].setMatrixAt(j, m.compose(p, q, s));
-        enemyMeshes[v].setColorAt(j, e.flash[i] > 0 ? flashColor : kindColors[e.kind[i]]);
+        p.set(e.x[i], def.radius + 0.1 + Math.sin(t * 2 + id) * 0.15, e.y[i]);
+        if (kind === BACILLUS) q.setFromAxisAngle(UP, -Math.atan2(w.player.y - e.y[i], w.player.x - e.x[i]));
+        else q.setFromAxisAngle(look.axis, look.phase + t * look.spin * (kind === BOSS ? 0.3 : 1));
+        s.setScalar(kind === BOSS ? 1 : look.scale);
+        ms[v].setMatrixAt(j, m.compose(p, q, s));
+        ms[v].setColorAt(j, e.flash[i] > 0 ? flashColor : kindColors[kind]);
         if (e.mark[i] > 0) {
           q.setFromAxisAngle(UP, t * 3 + id);
-          s.setScalar(1 + Math.sin(t * 10) * 0.08);
+          s.setScalar((def.radius / COCCUS.radius) * (1 + Math.sin(t * 10) * 0.08));
           markMesh.setMatrixAt(marks++, m.compose(p, q, s));
         }
       }
-      markMesh.count = marks;
-      markMesh.instanceMatrix.needsUpdate = true;
-      enemyMeshes.forEach((mesh, v) => {
-        mesh.count = counts[v];
+      kindMeshes.forEach((ms, k) => ms.forEach((mesh, v) => {
+        mesh.count = counts[k][v];
         mesh.instanceMatrix.needsUpdate = true;
         mesh.instanceColor!.needsUpdate = true;
-      });
+      }));
+
+      const cf = w.cells.f;
+      for (let k = 0; k < w.cells.count; k++) {
+        p.set(cf.x[k], CELL.radius * 0.8, cf.y[k]);
+        q.setFromAxisAngle(UP, k);
+        s.set(1, 0.75, 1);
+        m.compose(p, q, s);
+        cellMem.setMatrixAt(k, m);
+        cellNuc.setMatrixAt(k, m);
+      }
+      cellMem.count = cellNuc.count = w.cells.count;
+      cellMem.instanceMatrix.needsUpdate = cellNuc.instanceMatrix.needsUpdate = true;
+      markMesh.count = marks;
+      markMesh.instanceMatrix.needsUpdate = true;
 
       // 투사체: 날아가는 방향으로 길쭉하게
       const sh = w.shots.f, shotCounts = [0, 0], shotMeshes = [shotMesh, abShotMesh];
@@ -241,7 +327,15 @@ export function createView(scene: THREE.Scene) {
       gemMesh.count = w.gems.count;
       gemMesh.instanceMatrix.needsUpdate = true;
 
-      for (const d of w.deaths) particles.burst(d.x, 0.4, d.y, kindColors[d.kind]);
+      for (const d of w.deaths) {
+        if (d.kind !== BOSS) { particles.burst(d.x, 0.4, d.y, kindColors[d.kind]); continue; }
+        particles.burst(d.x, 1.5, d.y, kindColors[d.kind], 160, 2.5);
+        particles.burst(d.x, 1.5, d.y, flashColor, 60, 1.8);
+        for (const r of [3, 5, 8]) shocks.add(d.x, d.y, r);
+      }
+      for (const c of w.infections) particles.burst(c.x, 0.6, c.y, infectColor, 14, 0.8);
+      for (const h of w.resistHits) popups.add(h.x, 3.6, h.y);
+      popups.update(dt);
       for (const b of w.bursts) {
         shocks.add(b.x, b.y, b.r);
         particles.burst(b.x, 0.4, b.y, flashColor, 8, 1.4);

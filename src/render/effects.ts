@@ -95,3 +95,48 @@ export function createShockwaves(scene: THREE.Scene) {
     },
   };
 }
+
+const POP_MAX = 32, POP_TIME = 0.8;
+
+// "내성!" 표시: 같은 글자 텍스처를 쓰는 평면, 카메라를 향하고 위로 떠오르며 줄어든다
+export function createPopups(scene: THREE.Scene, camera: THREE.Camera, text: string) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 96;
+  const g = c.getContext('2d')!;
+  g.font = 'bold 60px system-ui, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.lineWidth = 8;
+  g.strokeStyle = 'rgba(20, 20, 24, 0.9)';
+  g.strokeText(text, 128, 50);
+  g.fillStyle = '#b8b8c0';
+  g.fillText(text, 128, 50);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const mesh = new THREE.InstancedMesh(
+    new THREE.PlaneGeometry(1.6, 0.6),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }),
+    POP_MAX,
+  );
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 10;
+  scene.add(mesh);
+  const list: { x: number; y: number; z: number; t: number }[] = [];
+  const m = new THREE.Matrix4(), p = new THREE.Vector3(), s = new THREE.Vector3();
+  return {
+    add(x: number, y: number, z: number) {
+      if (list.length < POP_MAX) list.push({ x: x + (Math.random() - 0.5), y, z, t: 0 });
+    },
+    update(dt: number) {
+      for (let i = list.length - 1; i >= 0; i--) if ((list[i].t += dt) >= POP_TIME) list.splice(i, 1);
+      list.forEach((o, i) => {
+        const k = o.t / POP_TIME, sc = k < 0.15 ? k / 0.15 * 1.2 : 1.2 - (k - 0.15) * 1.4;
+        p.set(o.x, o.y + k * 1.2, o.z);
+        s.setScalar(Math.max(0, sc));
+        mesh.setMatrixAt(i, m.compose(p, camera.quaternion, s));
+      });
+      mesh.count = list.length;
+      mesh.instanceMatrix.needsUpdate = true;
+    },
+  };
+}

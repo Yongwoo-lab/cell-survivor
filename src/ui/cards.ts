@@ -1,4 +1,5 @@
 import fields from '../data/fields.json';
+import dialogue from '../data/dialogue.json';
 import type { World } from '../game/world';
 import type { Card } from '../game/cards';
 
@@ -26,7 +27,7 @@ export function createCardPicker(onPick: (i: number) => void) {
     shown = w.choosing;
     root.hidden = !shown;
     if (!shown) return;
-    root.innerHTML = `<h2>레벨 업!</h2><div class="hand">${shown.map((c, i) => {
+    root.innerHTML = `<h2>${dialogue.ui.levelUp}</h2><div class="hand">${shown.map((c, i) => {
       const cur = w.cards[c.id] ?? 0;
       return `<button class="card" data-i="${i}" style="--delay:${i * 0.12}s">
         <div class="face">
@@ -34,7 +35,7 @@ export function createCardPicker(onPick: (i: number) => void) {
           <h3>${c.name}</h3>
           <p class="effect">${c.effect}</p>
           <p class="sci">${c.science}</p>
-          <div class="foot"><span class="lv">${cur ? `${cur}/${c.levels.length} → ${cur + 1}/${c.levels.length}` : `NEW · 1/${c.levels.length}`}</span><kbd>${i + 1}</kbd></div>
+          <div class="foot"><span class="lv">${cur ? `${cur}/${c.levels.length} → ${cur + 1}/${c.levels.length}` : `${dialogue.ui.newCard} · 1/${c.levels.length}`}</span><kbd>${i + 1}</kbd></div>
         </div>
         <div class="back"></div>
       </button>`;
