@@ -7,6 +7,16 @@
     <style>
       html, body { margin: 0; height: 100%; overflow: hidden; background: #021417; }
       canvas { display: block; }
+      #hud { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); width: min(420px, 60vw); font: 13px system-ui, sans-serif; color: #dff; pointer-events: none; }
+      .bar { height: 10px; margin-bottom: 6px; background: rgba(0, 30, 35, 0.6); border: 1px solid rgba(120, 240, 230, 0.35); border-radius: 6px; overflow: hidden; }
+      .bar i { display: block; height: 100%; width: 0; transition: width 0.12s; }
+      .hp i { background: linear-gradient(90deg, #2fd6c6, #bffcff); box-shadow: 0 0 8px #3ff2e6; }
+      .xp { height: 8px; }
+      .xp i { background: linear-gradient(90deg, #ffb347, #ffe08a); }
+      .lv { display: block; text-align: right; font-size: 11px; opacity: 0.8; }
+      #over { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; background: rgba(5, 0, 15, 0.6); font-size: 22px; }
+      #over[hidden] { display: none; }
+      #over small { opacity: 0.7; font-size: 14px; margin-top: 8px; }
       #fps { position: fixed; top: 8px; left: 8px; font: 14px monospace; color: #9ff; pointer-events: none; }
     </style>
   </head>

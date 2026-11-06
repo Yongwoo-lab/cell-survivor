@@ -1,0 +1,6 @@
+{
+  "player": { "hp": 100, "speed": 6, "radius": 0.9, "invulnTime": 0.5, "magnetRadius": 3.5, "magnetSpeed": 14, "pickupRadius": 0.8 },
+  "shot": { "interval": 0.5, "speed": 16, "damage": 5, "radius": 0.25, "life": 1.5, "range": 18 },
+  "xp": { "base": 5, "growth": 1.35 },
+  "spawn": { "distance": 24, "startPerSec": 1.0, "growthPerSec": 0.06, "maxEnemies": 500 }
+}

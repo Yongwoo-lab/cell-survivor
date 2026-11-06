@@ -1,23 +1,27 @@
 import { createWorld, updateWorld } from './game/world';
 import { createScene } from './render/scene';
-import { createPlayerMesh, createCocciMesh, syncMeshes } from './render/meshes';
+import { createView } from './render/meshes';
 import { followCamera } from './render/camera';
+import { createHud } from './ui/hud';
 import { tickFps } from './ui/fps';
 
+const world = createWorld();
+
 const keys = new Set<string>();
-addEventListener('keydown', (e) => keys.add(e.code));
+addEventListener('keydown', (e) => {
+  keys.add(e.code);
+  if (e.code === 'KeyR' && world.over) location.reload();
+});
 addEventListener('keyup', (e) => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
 const held = (...codes: string[]) => codes.some((c) => keys.has(c));
 
-const world = createWorld();
 const { scene, camera, composer } = createScene();
-const player = createPlayerMesh();
-const cocci = createCocciMesh(world.cocci.count, world.cocci.radius);
-scene.add(player, cocci);
+const view = createView(scene);
+const updateHud = createHud();
 
-syncMeshes(world, player, cocci, 0);
-followCamera(camera, player.position, 0, true);
+view.sync(world, 0, 0);
+followCamera(camera, view.player.position, 0, true);
 
 let last = performance.now();
 function frame(now: number) {
@@ -28,9 +32,10 @@ function frame(now: number) {
     y: +held('ArrowDown', 'KeyS') - +held('ArrowUp', 'KeyW'),
   };
   updateWorld(world, dt, move);
-  syncMeshes(world, player, cocci, now / 1000);
-  followCamera(camera, player.position, dt);
+  view.sync(world, dt, now / 1000);
+  followCamera(camera, view.player.position, dt);
   composer.render();
+  updateHud(world);
   tickFps(dt);
   requestAnimationFrame(frame);
 }
