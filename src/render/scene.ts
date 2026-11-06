@@ -54,7 +54,8 @@ export function createScene() {
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
   // 정말 밝은 부분(선형 휘도 > 0.85)만 번지게
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.35, 0.4, 0.85));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.35, 0.4, 0.85);
+  composer.addPass(bloom);
   composer.addPass(new OutputPass());
   composer.addPass(new ShaderPass(LensShader));
 
@@ -65,5 +66,11 @@ export function createScene() {
     composer.setSize(innerWidth, innerHeight);
   });
 
-  return { scene, camera, composer };
+  // 레벨업 빛 퍼짐: g = 0(평상시) ~ 1(최대)
+  const setGlow = (g: number) => {
+    bloom.strength = 0.35 + g * 1.6;
+    bloom.threshold = 0.85 - g * 0.65;
+  };
+
+  return { scene, camera, composer, setGlow };
 }

@@ -4,11 +4,12 @@ import balance from '../data/balance.json';
 import { Pool } from './pool';
 import { SpatialHash } from './collision';
 import { updateSpawner } from './spawner';
+import { type FieldCounts } from './result';
+import { type Card, cardLevel, updateCards, damageEnemy, drawCards, fireShot, nearestEnemies, atkMul, MAX_RADIUS, FLASH_TIME } from './cards';
 
-export const COCCUS = enemies.find((e) => e.id === 'coccus')!;
-const P = balance.player, S = balance.shot, X = balance.xp;
+const P = balance.player, S = balance.shot, X = balance.xp, L = balance.levelUp;
+export const ENEMIES = enemies;
 export const MAX_ENEMIES = 1024;
-const FLASH_TIME = 0.05;
 
 export interface Vec2 { x: number; y: number }
 
@@ -17,98 +18,130 @@ export function createWorld() {
     time: 0,
     over: false,
     player: { x: 0, y: 0, hp: P.hp, maxHp: P.hp, invuln: 0, xp: 0, level: 1, xpToNext: X.base },
-    enemies: new Pool(MAX_ENEMIES, ['x', 'y', 'hp', 'flash', 'id'] as const),
-    shots: new Pool(256, ['x', 'y', 'vx', 'vy', 'life'] as const),
+    enemies: new Pool(MAX_ENEMIES, ['x', 'y', 'hp', 'flash', 'id', 'kind', 'mark', 'macroCd'] as const),
+    shots: new Pool(512, ['x', 'y', 'vx', 'vy', 'life', 'kind'] as const), // kind 0 기본, 1 항체
     gems: new Pool(2048, ['x', 'y', 'xp', 'pulled'] as const),
-    deaths: [] as Vec2[], // 이번 프레임에 죽은 적 위치 (화면 연출용, 매 프레임 비움)
+    nets: new Pool(16, ['x', 'y', 'life', 'maxLife', 'radius'] as const),
+    nk: new Pool(8, ['x', 'y', 'cd'] as const),
+    macro: [] as Vec2[],
+    // 이번 프레임 이벤트 (화면 연출용, 매 프레임 비움)
+    deaths: [] as { x: number; y: number; kind: number }[],
+    bursts: [] as { x: number; y: number; r: number }[],
     hash: new SpatialHash(MAX_ENEMIES),
     spawnAcc: 0,
     fireCd: S.interval,
     nextId: 0,
+    cards: {} as Record<string, number>, // 카드 id → 단계
+    timers: {} as Record<string, number>,
+    kills: enemies.map(() => 0), // 종류별 처치 수 (기억세포)
+    result: {} as FieldCounts,
+    slowmo: 0, // 레벨업 슬로모션 남은 실시간(초)
+    pendingLevels: 0,
+    choosing: null as Card[] | null, // 카드 선택 중이면 게임 정지
   };
 }
 export type World = ReturnType<typeof createWorld>;
 
-export function updateWorld(w: World, dt: number, move: Vec2) {
+export function updateWorld(w: World, realDt: number, move: Vec2) {
   w.deaths.length = 0;
-  if (w.over) return;
+  w.bursts.length = 0;
+  if (w.over || w.choosing) return;
+  let dt = realDt;
+  if (w.slowmo > 0) {
+    dt *= L.slowmoScale;
+    if ((w.slowmo -= realDt) <= 0) {
+      w.slowmo = 0;
+      const hand = drawCards(w);
+      if (hand.length) w.choosing = hand;
+      else w.pendingLevels = 0; // 모든 카드가 최대 단계
+    }
+  }
   w.time += dt;
   const pl = w.player;
+  const speed = P.speed * (1 + (cardLevel(w, 'cytokine')?.moveSpeed ?? 0));
   const len = Math.hypot(move.x, move.y) || 1;
-  pl.x += (move.x / len) * P.speed * dt;
-  pl.y += (move.y / len) * P.speed * dt;
+  pl.x += (move.x / len) * speed * dt;
+  pl.y += (move.y / len) * speed * dt;
   pl.invuln -= dt;
 
   updateSpawner(w, dt);
 
-  // 적: 플레이어 추적
-  const E = w.enemies, e = E.f, er = COCCUS.radius;
+  // 적: 플레이어 추적. 발열·그물이 느리게 하고, 그물 위에서는 지속 피해.
+  const E = w.enemies, e = E.f;
+  const fever = 1 - (cardLevel(w, 'fever')?.enemySlow ?? 0);
+  const nt = cardLevel(w, 'net'), n = w.nets.f;
   for (let i = 0; i < E.count; i++) {
+    const def = enemies[e.kind[i]];
+    let mul = fever;
+    if (nt) for (let k = 0; k < w.nets.count; k++) {
+      if ((e.x[i] - n.x[k]) ** 2 + (e.y[i] - n.y[k]) ** 2 > n.radius[k] ** 2) continue;
+      mul *= 1 - nt.slow;
+      damageEnemy(w, i, nt.dps * dt, false);
+      break;
+    }
     const dx = pl.x - e.x[i], dy = pl.y - e.y[i];
     const d = Math.hypot(dx, dy) || 1;
-    e.x[i] += (dx / d) * COCCUS.speed * dt;
-    e.y[i] += (dy / d) * COCCUS.speed * dt;
+    e.x[i] += (dx / d) * def.speed * mul * dt;
+    e.y[i] += (dy / d) * def.speed * mul * dt;
     e.flash[i] -= dt;
+    e.mark[i] -= dt;
+    e.macroCd[i] -= dt;
   }
   w.hash.build(e.x, e.y, E.count);
 
   // 적끼리 겹치지 않게 밀어냄
-  const minD = er * 2;
   for (let i = 0; i < E.count; i++) {
-    w.hash.query(e.x[i], e.y[i], minD, (j) => {
+    const ri = enemies[e.kind[i]].radius;
+    w.hash.query(e.x[i], e.y[i], ri + MAX_RADIUS, (j) => {
       if (j <= i) return;
+      const minD = ri + enemies[e.kind[j]].radius;
       const dx = e.x[j] - e.x[i], dy = e.y[j] - e.y[i];
       const d2 = dx * dx + dy * dy;
       if (d2 >= minD * minD || d2 === 0) return;
-      const d = Math.sqrt(d2), push = (minD - d) * 0.5 / d;
+      const d = Math.sqrt(d2), push = ((minD - d) * 0.5) / d;
       e.x[i] -= dx * push; e.y[i] -= dy * push;
       e.x[j] += dx * push; e.y[j] += dy * push;
     });
   }
 
-  // 자동 발사: 사거리 안 가장 가까운 적
+  // 기본 공격: 가장 가까운 적에게 자동 발사
   w.fireCd -= dt;
   if (w.fireCd <= 0) {
-    let best = -1, bestD = S.range * S.range;
-    for (let i = 0; i < E.count; i++) {
-      const d = (e.x[i] - pl.x) ** 2 + (e.y[i] - pl.y) ** 2;
-      if (d < bestD) { bestD = d; best = i; }
-    }
-    if (best >= 0) {
-      const k = w.shots.add();
-      if (k >= 0) {
-        const s = w.shots.f, d = Math.sqrt(bestD) || 1;
-        s.x[k] = pl.x; s.y[k] = pl.y;
-        s.vx[k] = ((e.x[best] - pl.x) / d) * S.speed;
-        s.vy[k] = ((e.y[best] - pl.y) / d) * S.speed;
-        s.life[k] = S.life;
-      }
-      w.fireCd = S.interval;
+    const [t] = nearestEnemies(w, 1);
+    if (t !== undefined) {
+      fireShot(w, 0, e.x[t], e.y[t], S.speed);
+      w.fireCd = S.interval / atkMul(w);
     }
   }
 
-  // 투사체 이동·명중
-  const SH = w.shots, s = SH.f, hitR = S.radius + er;
+  // 투사체 이동·명중 (항체 투사체는 피해 대신 표식)
+  const SH = w.shots, s = SH.f;
+  const ab = cardLevel(w, 'antibody');
   for (let k = SH.count - 1; k >= 0; k--) {
     s.x[k] += s.vx[k] * dt;
     s.y[k] += s.vy[k] * dt;
     s.life[k] -= dt;
     let hit = false;
-    w.hash.query(s.x[k], s.y[k], hitR, (i) => {
-      if (e.hp[i] <= 0 || (e.x[i] - s.x[k]) ** 2 + (e.y[i] - s.y[k]) ** 2 > hitR * hitR) return;
-      e.hp[i] -= S.damage;
-      e.flash[i] = FLASH_TIME;
+    w.hash.query(s.x[k], s.y[k], S.radius + MAX_RADIUS, (i) => {
+      const r = S.radius + enemies[e.kind[i]].radius;
+      if (e.hp[i] <= 0 || (e.x[i] - s.x[k]) ** 2 + (e.y[i] - s.y[k]) ** 2 > r * r) return;
+      if (s.kind[k] === 1) {
+        if (ab) e.mark[i] = ab.markDuration;
+        e.flash[i] = FLASH_TIME;
+      } else damageEnemy(w, i, S.damage);
       return (hit = true);
     });
     if (hit || s.life[k] <= 0) SH.remove(k);
   }
 
+  updateCards(w, dt);
+
   // 적이 플레이어에 닿으면 피해 (맞은 뒤 잠깐 무적)
   if (pl.invuln <= 0) {
-    const r = P.radius + er;
-    w.hash.query(pl.x, pl.y, r, (i) => {
+    w.hash.query(pl.x, pl.y, P.radius + MAX_RADIUS, (i) => {
+      const def = enemies[e.kind[i]], r = P.radius + def.radius;
       if (e.hp[i] <= 0 || (e.x[i] - pl.x) ** 2 + (e.y[i] - pl.y) ** 2 > r * r) return;
-      pl.hp = Math.max(0, pl.hp - COCCUS.damage);
+      pl.hp = Math.max(0, pl.hp - def.damage);
       pl.invuln = P.invulnTime;
       return true;
     });
@@ -118,11 +151,13 @@ export function updateWorld(w: World, dt: number, move: Vec2) {
   // 죽은 적 제거 → 항원 조각
   for (let i = E.count - 1; i >= 0; i--) {
     if (e.hp[i] > 0) continue;
-    w.deaths.push({ x: e.x[i], y: e.y[i] });
+    const kind = e.kind[i];
+    w.deaths.push({ x: e.x[i], y: e.y[i], kind });
+    w.kills[kind]++;
     const g = w.gems.add();
     if (g >= 0) {
       const gf = w.gems.f;
-      gf.x[g] = e.x[i]; gf.y[g] = e.y[i]; gf.xp[g] = COCCUS.xp; gf.pulled[g] = 0;
+      gf.x[g] = e.x[i]; gf.y[g] = e.y[i]; gf.xp[g] = enemies[kind].xp; gf.pulled[g] = 0;
     }
     E.remove(i);
   }
@@ -148,5 +183,7 @@ export function updateWorld(w: World, dt: number, move: Vec2) {
     pl.xp -= pl.xpToNext;
     pl.level++;
     pl.xpToNext = Math.round(X.base * X.growth ** (pl.level - 1));
+    w.pendingLevels++;
   }
+  if (w.pendingLevels > 0 && w.slowmo <= 0 && !w.choosing) w.slowmo = L.slowmoTime;
 }

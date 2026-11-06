@@ -1,9 +1,13 @@
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import balance from '../data/balance.json';
-import { COCCUS, MAX_ENEMIES, type World } from '../game/world';
+import cards from '../data/cards.json';
+import { ENEMIES, MAX_ENEMIES, type World } from '../game/world';
 import { glassy, time } from './materials';
-import { createParticles } from './effects';
+import { createParticles, createShockwaves } from './effects';
+
+const COCCUS = ENEMIES.find((e) => e.id === 'coccus')!;
+const T = balance.cardTuning;
 
 // 게임 (x, y) → 화면 (x, z)
 function createPlayerMesh() {
@@ -56,6 +60,34 @@ function instanced(geo: THREE.BufferGeometry, mat: THREE.Material, cap: number, 
   return mesh;
 }
 
+// 그물 무늬: 방사선 + 동심원 (캔버스로 생성)
+function webTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d')!;
+  g.strokeStyle = '#fff';
+  g.lineWidth = 2;
+  g.translate(128, 128);
+  for (let k = 0; k < 14; k++) {
+    const a = (k / 14) * Math.PI * 2 + Math.random() * 0.15;
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a) * 126, Math.sin(a) * 126); g.stroke();
+  }
+  for (let r = 22; r < 128; r += 20) {
+    g.beginPath();
+    for (let k = 0; k <= 28; k++) {
+      const a = (k / 28) * Math.PI * 2, rr = r + Math.sin(k * 3 + r) * 3;
+      g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    g.stroke();
+  }
+  const grd = g.createRadialGradient(0, 0, 0, 0, 0, 128);
+  grd.addColorStop(0, 'rgba(255,255,255,0.25)');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd;
+  g.fillRect(-128, -128, 256, 256);
+  return new THREE.CanvasTexture(c);
+}
+
 const VARIANTS = [3, 4, 5, 6];
 const LOOKS = 256; // 개체별 회전·크기는 id로 이 표에서 고른다 (swap 삭제에도 모습 유지)
 
@@ -64,7 +96,8 @@ export function createView(scene: THREE.Scene) {
   scene.add(player);
 
   // 적: 재질은 흰색, 실제 색은 인스턴스 색 (번쩍임 = 밝은 흰색으로 교체)
-  const enemyColor = new THREE.Color(COCCUS.color);
+  const kindColors = ENEMIES.map((d) => new THREE.Color(d.color));
+  const enemyColor = kindColors[0];
   const flashColor = new THREE.Color(4, 4, 4);
   const enemyMat = glassy({
     color: 0xffffff, opacity: 0.55, rim: 0xffb36b, rimStrength: 0.7,
@@ -79,18 +112,41 @@ export function createView(scene: THREE.Scene) {
     scale: 0.8 + Math.random() * 0.45,
   }));
 
-  const shotMesh = instanced(
-    new THREE.SphereGeometry(balance.shot.radius, 12, 8),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9ffcff).multiplyScalar(2.5) }),
-    256,
+  const shotGeo = new THREE.SphereGeometry(balance.shot.radius, 12, 8);
+  const shotMesh = instanced(shotGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9ffcff).multiplyScalar(2.5) }), 512);
+  const abShotMesh = instanced(shotGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff0a0).multiplyScalar(2.2) }), 512);
+
+  // 항체 표식: 표식 달린 적 위의 고리
+  const markMesh = instanced(
+    new THREE.TorusGeometry(COCCUS.radius * 1.9, 0.035, 6, 32).rotateX(Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff0a0).multiplyScalar(1.6), transparent: true, opacity: 0.9 }),
+    MAX_ENEMIES,
+  );
+
+  // 대식세포·NK세포: 아군 세포 (청록·흰색)
+  const macroMax = Math.max(...cards.find((c) => c.id === 'macrophage')!.levels.map((l) => (l as { count: number }).count));
+  const macroMesh = instanced(new THREE.SphereGeometry(T.orbiterRadius, 32, 20), glassy({
+    color: 0x1a5a5a, opacity: 0.35, rim: 0x9ffff0, rimStrength: 1.3, emissive: 0x0a3a3a, depthWrite: true,
+  }), macroMax);
+  const nkMesh = instanced(new THREE.IcosahedronGeometry(T.nkRadius, 2), glassy({
+    color: 0xe8ffff, opacity: 0.6, rim: 0xffffff, rimStrength: 1.6, emissive: 0x4fd8e0, emissiveIntensity: 0.8, depthWrite: true,
+  }), 8);
+
+  // 호중구 NET: 바닥에 깔린 그물 원판 (가산 혼합, 색으로 서서히 사라짐)
+  const netMesh = instanced(
+    new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ map: webTexture(), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }),
+    16, new THREE.Color(0),
   );
   const gemMesh = instanced(
     new THREE.OctahedronGeometry(0.2),
     new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd36b).multiplyScalar(1.4) }),
     2048,
   );
-  scene.add(shotMesh, gemMesh);
+  scene.add(shotMesh, abShotMesh, gemMesh, markMesh, macroMesh, nkMesh, netMesh);
   const particles = createParticles(scene);
+  const shocks = createShockwaves(scene);
+  const netColor = new THREE.Color(0xbffcff), tmpColor = new THREE.Color();
 
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
   const UP = new THREE.Vector3(0, 1, 0);
@@ -106,6 +162,7 @@ export function createView(scene: THREE.Scene) {
 
       const e = w.enemies.f;
       counts.fill(0);
+      let marks = 0;
       for (let i = 0; i < w.enemies.count; i++) {
         const id = e.id[i], v = id % VARIANTS.length, j = counts[v]++;
         const look = looks[id % LOOKS];
@@ -113,8 +170,15 @@ export function createView(scene: THREE.Scene) {
         q.setFromAxisAngle(look.axis, look.phase + t * look.spin);
         s.setScalar(look.scale);
         enemyMeshes[v].setMatrixAt(j, m.compose(p, q, s));
-        enemyMeshes[v].setColorAt(j, e.flash[i] > 0 ? flashColor : enemyColor);
+        enemyMeshes[v].setColorAt(j, e.flash[i] > 0 ? flashColor : kindColors[e.kind[i]]);
+        if (e.mark[i] > 0) {
+          q.setFromAxisAngle(UP, t * 3 + id);
+          s.setScalar(1 + Math.sin(t * 10) * 0.08);
+          markMesh.setMatrixAt(marks++, m.compose(p, q, s));
+        }
       }
+      markMesh.count = marks;
+      markMesh.instanceMatrix.needsUpdate = true;
       enemyMeshes.forEach((mesh, v) => {
         mesh.count = counts[v];
         mesh.instanceMatrix.needsUpdate = true;
@@ -122,15 +186,50 @@ export function createView(scene: THREE.Scene) {
       });
 
       // 투사체: 날아가는 방향으로 길쭉하게
-      const sh = w.shots.f;
+      const sh = w.shots.f, shotCounts = [0, 0], shotMeshes = [shotMesh, abShotMesh];
       for (let k = 0; k < w.shots.count; k++) {
         p.set(sh.x[k], 0.8, sh.y[k]);
         q.setFromAxisAngle(UP, -Math.atan2(sh.vy[k], sh.vx[k]));
         s.set(2.2, 1, 1);
-        shotMesh.setMatrixAt(k, m.compose(p, q, s));
+        const kind = sh.kind[k];
+        shotMeshes[kind].setMatrixAt(shotCounts[kind]++, m.compose(p, q, s));
       }
-      shotMesh.count = w.shots.count;
-      shotMesh.instanceMatrix.needsUpdate = true;
+      shotMeshes.forEach((mesh, kind) => {
+        mesh.count = shotCounts[kind];
+        mesh.instanceMatrix.needsUpdate = true;
+      });
+
+      w.macro.forEach((o, k) => {
+        p.set(o.x, 0.8, o.y);
+        q.setFromAxisAngle(UP, t * 2 + k);
+        s.set(1 + Math.sin(t * 6 + k) * 0.06, 1, 1 - Math.sin(t * 6 + k) * 0.06);
+        macroMesh.setMatrixAt(k, m.compose(p, q, s));
+      });
+      macroMesh.count = w.macro.length;
+      macroMesh.instanceMatrix.needsUpdate = true;
+
+      const u = w.nk.f;
+      for (let k = 0; k < w.nk.count; k++) {
+        p.set(u.x[k], 0.9, u.y[k]);
+        q.setFromAxisAngle(UP, t * 4 + k);
+        s.setScalar(1);
+        nkMesh.setMatrixAt(k, m.compose(p, q, s));
+      }
+      nkMesh.count = w.nk.count;
+      nkMesh.instanceMatrix.needsUpdate = true;
+
+      const n = w.nets.f;
+      for (let k = 0; k < w.nets.count; k++) {
+        const left = n.life[k] / n.maxLife[k], grow = Math.min(1, (1 - left) * n.maxLife[k] * 6); // 깔릴 때 빠르게 펼쳐짐
+        p.set(n.x[k], 0.05, n.y[k]);
+        q.setFromAxisAngle(UP, k);
+        s.set(n.radius[k] * grow, 1, n.radius[k] * grow);
+        netMesh.setMatrixAt(k, m.compose(p, q, s));
+        netMesh.setColorAt(k, tmpColor.copy(netColor).multiplyScalar(0.55 * Math.min(1, left * 4)));
+      }
+      netMesh.count = w.nets.count;
+      netMesh.instanceMatrix.needsUpdate = true;
+      netMesh.instanceColor!.needsUpdate = true;
 
       const g = w.gems.f;
       for (let k = 0; k < w.gems.count; k++) {
@@ -142,8 +241,13 @@ export function createView(scene: THREE.Scene) {
       gemMesh.count = w.gems.count;
       gemMesh.instanceMatrix.needsUpdate = true;
 
-      for (const d of w.deaths) particles.burst(d.x, 0.4, d.y, enemyColor);
+      for (const d of w.deaths) particles.burst(d.x, 0.4, d.y, kindColors[d.kind]);
+      for (const b of w.bursts) {
+        shocks.add(b.x, b.y, b.r);
+        particles.burst(b.x, 0.4, b.y, flashColor, 8, 1.4);
+      }
       particles.update(dt);
+      shocks.update(dt);
     },
   };
 }
