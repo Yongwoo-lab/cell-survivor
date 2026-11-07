@@ -115,10 +115,27 @@ async function waitVisible(page, sel, timeout = 5000) {
 }
 const press = (page, ...keys) => keys.reduce((p, k) => p.then(() => page.keyboard.press(k)), Promise.resolve());
 // 게임 시작 (타이틀에서 Enter → 콜드 오픈 Space로 건너뛰기)
+// 타이틀에서 시작 → 에피소드 선택 → 에피소드 1
+async function startEpisode(page) {
+  await press(page, 'Enter');
+  if (!(await waitVisible(page, '#episodes .ep', 2000))) return false;
+  await press(page, 'Enter');
+  return true;
+}
+// 결과 카드까지: 승리 예고가 나오면 Enter로 건너뛴다
+async function waitResult(page, ms = 10000) {
+  const until = Date.now() + ms;
+  while (Date.now() < until) {
+    if (await visible(page, '#result .rc')) return true;
+    if (await visible(page, '#teaser')) await press(page, 'Enter');
+    await sleep(200);
+  }
+  return false;
+}
 async function startPlay(page) {
   await waitPhase(page, 'title');
   await sleep(300);
-  await press(page, 'Enter');
+  await startEpisode(page);
   await waitPhase(page, 'cold', 3000);
   await sleep(300);
   await press(page, 'Space');
@@ -129,7 +146,7 @@ const bossHp = (page, hp) => page.evaluate((v) => {
   for (let i = 0; i < w.enemies.count; i++) if (e.kind[i] === window.__qa.bossKind) e.hp[i] = v;
 }, hp);
 async function finishRanking(page) {
-  await waitVisible(page, '#result', 10000);
+  await waitResult(page, 15000);
   await sleep(1200);
   await press(page, 'Enter');
   if (!(await waitVisible(page, '#ranking', 3000))) return false;
@@ -151,9 +168,9 @@ const tests = {
     const tracks = [];
     const track = async () => { await sleep(150); tracks.push(await page.evaluate(() => window.__qa.info().track)); };
     check('flow: title shows logo and menu', (await visible(page, '#title .logo')) && (await visible(page, '#title .menu button')));
-    await press(page, 'Enter');
-    check('flow: Enter starts cold open', (await waitPhase(page, 'cold', 2000)) && (await waitVisible(page, '#coldopen', 3000)));
+    check('flow: Enter opens episode select then cold open', (await startEpisode(page)) && (await waitPhase(page, 'cold', 2000)) && (await waitVisible(page, '#coldopen', 3000)));
     check('flow: cold open hands over to prologue', (await waitPhase(page, 'prologue', 10000)) && (await visible(page, '#prologue')));
+    check('flow: prologue opens with episode title', await page.waitForFunction(() => document.querySelector('#prologue .epcard')?.classList.contains('on'), null, { timeout: 3000 }).then(() => true, () => false));
     check('flow: prologue ends in play with HUD', (await waitPhase(page, 'play', 22000)) && (await waitVisible(page, '#hud')));
     await track();
     await press(page, 'F7', 'F4');
@@ -174,7 +191,13 @@ const tests = {
     await bossHp(page, 0.01);
     check('flow: boss kill enters victory', await waitPhase(page, 'victory', 5000));
     check('flow: white flash', await page.waitForFunction(() => document.querySelector('#flash')?.classList.contains('on'), null, { timeout: 3000 }).then(() => true, () => false));
-    check('flow: ending then result (won)', (await waitVisible(page, '#ending', 6000)) && (await waitVisible(page, '#result.won', 6000)));
+    check('flow: ending then teaser (won)', (await waitVisible(page, '#ending', 6000)) && (await waitVisible(page, '#teaser', 6000)));
+    // 예고: 세 줄이 한 줄씩 타이핑된 뒤 다음 에피소드 제목, 아무 키나 → 결과
+    const lines = await page.waitForFunction(() => document.querySelector('#teaser .next')?.classList.contains('on') && [...document.querySelectorAll('#teaser .lines p')].map((p) => p.textContent), null, { timeout: 15000 }).then((h) => h.jsonValue(), () => null);
+    check('flow: teaser types 3 lines then next title', !!lines && lines.length === 3 && lines.every((l) => l.length > 5), JSON.stringify(lines));
+    await sleep(1500);
+    await press(page, 'KeyX');
+    check('flow: any key after teaser shows result (won)', await waitVisible(page, '#result.won', 3000));
     await track();
     check('flow: result → ranking → title', await finishRanking(page));
     await track();
@@ -199,7 +222,7 @@ const tests = {
   // 프롤로그 건너뛰기
   async skip() {
     const { page, ctx } = await open('skip');
-    await press(page, 'Enter');
+    await startEpisode(page);
     await waitPhase(page, 'prologue', 10000);
     await sleep(500);
     await press(page, 'Space');
@@ -329,7 +352,7 @@ const tests = {
       for (let i = 0; i < w.enemies.count; i++) if (e.kind[i] === window.__qa.bossKind) e.hp[i] = 0;
     });
     await press(page, 'F7'); // 무적 해제
-    check('edges: boss kill + death same frame resolves', (await waitPhase(page, ['victory', 'ending', 'result'], 4000)) && (await waitVisible(page, '#result', 9000)));
+    check('edges: boss kill + death same frame resolves', (await waitPhase(page, ['victory', 'ending', 'result'], 4000)) && (await waitResult(page, 12000)));
     // 결과 화면에서 포커스를 잃어도 계속 진행
     await page.evaluate(() => { window.dispatchEvent(new Event('blur')); document.dispatchEvent(new Event('visibilitychange')); });
     await sleep(1200);
@@ -345,7 +368,7 @@ const tests = {
     await press(page, 'Enter');
     await waitPhase(page, 'title', 3000);
     // 프롤로그 중 키 연타
-    await press(page, 'Enter');
+    await startEpisode(page);
     await waitPhase(page, 'prologue', 10000);
     for (let i = 0; i < 40; i++) await page.keyboard.press(['KeyA', 'Enter', 'ArrowLeft', 'KeyM', 'Digit1', 'Escape'][i % 6]);
     check('edges: key mashing in prologue still reaches play', await waitPhase(page, 'play', 22000));
@@ -484,6 +507,33 @@ const tests = {
       return { names: Object.keys(seen), dup: Object.entries(seen).filter(([, n]) => n > 1).map(([k]) => k) };
     });
     check('cssprops: no @property registered twice', !dup.dup.length, `${dup.names.join(' ')}${dup.dup.length ? ' dup ' + dup.dup.join(' ') : ''}`);
+    await ctx.close();
+  },
+
+  // 에피소드 선택(키보드·마우스, 잠긴 카드) + 예고 건너뛰기
+  async episodes() {
+    const { page, ctx } = await open('episodes');
+    await waitPhase(page, 'title');
+    await sleep(300);
+    await press(page, 'Enter');
+    await waitVisible(page, '#episodes .ep', 2000);
+    await press(page, 'ArrowRight', 'Enter');
+    const locked = await page.evaluate(() => ({ shake: document.querySelectorAll('#episodes .ep')[1].classList.contains('shake'),
+      toast: !document.querySelector('#episodes .toast').hidden, phase: window.__qa.phase(), open: !document.querySelector('#episodes').hidden }));
+    check('episodes: locked episode shakes and shows toast', locked.shake && locked.toast && locked.phase === 'title' && locked.open, JSON.stringify(locked));
+    await press(page, 'Escape');
+    check('episodes: Esc goes back to title menu', !(await visible(page, '#episodes')) && (await visible(page, '#title .menu button')));
+    await page.locator('#title .menu button').first().click();
+    await waitVisible(page, '#episodes .ep', 2000);
+    await page.locator('#episodes .ep').first().click();
+    check('episodes: mouse click on episode 1 starts', await waitPhase(page, 'cold', 3000));
+    await press(page, 'Space');
+    await waitPhase(page, 'play', 3000);
+    await press(page, 'KeyT');
+    await waitVisible(page, '#teaser', 2000);
+    await sleep(800);
+    await press(page, 'Space');
+    check('episodes: dev T shows teaser, Space skips it', !(await visible(page, '#teaser')));
     await ctx.close();
   },
 

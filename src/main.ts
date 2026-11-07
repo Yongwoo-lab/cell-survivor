@@ -23,6 +23,8 @@ import { createCodex, recordCodex } from './ui/codex';
 import { createCombo } from './ui/combo';
 import { createPause } from './ui/pause';
 import { createPrologue } from './ui/prologue';
+import { createEpisodes } from './ui/episodes';
+import { createTeaser } from './ui/teaser';
 import { tickFps } from './ui/fps';
 import { unlock, startMusic, toggleMute, isMuted, setPaused, setMuted, soundFrame, sfx, onBeat, duckMusic, musicTrack } from './audio';
 import * as THREE from 'three';
@@ -99,8 +101,10 @@ const updatePicker = createCardPicker({
   focus: (i) => { artFocus = i; },
   deckTarget: () => deck.target(),
 });
+const episodes = createEpisodes({ start: () => startColdOpen(), back: () => {} });
+const teaser = createTeaser();
 const title = createTitle({
-  start: () => startColdOpen(),
+  start: () => { idle = 0; episodes.open(); },
   codex: () => codex.open(),
   rank: () => ranking.showBoard(),
   settings: () => settings,
@@ -250,6 +254,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) autoP
 
 function toTitle() {
   result.hide();
+  teaser.hide();
+  episodes.close();
   ranking.hide();
   story.reset();
   title.showDemo(false);
@@ -281,6 +287,7 @@ const dev = installDev({
     startColdOpen();
   },
   typing: () => phase === 'rank' && ranking.entering,
+  teaser: () => { if (!teaser.isOn) teaser.play(() => {}); },
 });
 
 const keys = new Set<string>();
@@ -290,7 +297,9 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Space' && phase !== 'rank') e.preventDefault();
   if (e.repeat) return;
   idle = 0;
+  if (teaser.isOn) return teaser.key(e);
   if (codex.isOpen) return void codex.key(e);
+  if (episodes.isOpen) return episodes.key(e);
   if (ranking.boardOpen) { if (['Enter', 'Escape', 'KeyR', 'Space'].includes(e.code)) ranking.hide(); return; }
   if (phase === 'rank') { if (ranking.key(e)) toTitle(); return; }
   if (phase === 'prologue') return prologue.key(e);
@@ -325,7 +334,7 @@ function frame(now: number) {
   const realDt = Math.min((now - last) / 1000, 0.1);
   last = now;
   const dt = paused ? 0 : realDt; // 일시정지: 게임 시간과 화면 효과 모두 멈춤
-  if (phase === 'title' && !codex.isOpen && !ranking.boardOpen && (idle += realDt) > balance.attract.idleSeconds) startDemo();
+  if (phase === 'title' && !codex.isOpen && !ranking.boardOpen && !episodes.isOpen && !teaser.isOn && (idle += realDt) > balance.attract.idleSeconds) startDemo();
   if (phase === 'play' && (paused || hitstop > 0)) {
     if (!paused) hitstop -= realDt; // 히트스톱: 세계가 잠깐 멈춤
   }
@@ -384,7 +393,7 @@ function frame(now: number) {
     if (prev < 0.8 && victoryT >= 0.8) sfx.victory();
     if (prev < 3.6 && victoryT >= 3.6) {
       phase = 'ending';
-      result.show(world, () => { phase = 'result'; });
+      result.show(world, () => { phase = 'result'; }, (next) => teaser.play(next)); // 승리: 다음 이야기 예고
     }
   }
   view.sync(world, frozen ? 0 : phase === 'victory' && victoryT < 0.5 ? dt * 0.2 : dt, now / 1000);

@@ -1,7 +1,7 @@
 // Web Audio 공용: 컨텍스트, 음소거, 같은 효과음 동시 재생 제한, 합성 도우미
 let ctx: AudioContext | null = null;
 let master: GainNode, sfxBus: GainNode, musicBus: GainNode, noiseBuf: AudioBuffer;
-let pauseLP: BiquadFilterNode, pauseGain: GainNode; // 일시정지 중 브금: 작게 + 저음만
+let pauseLP: BiquadFilterNode, pauseGain: GainNode, levelGain: GainNode; // 일시정지 중 브금: 작게 + 저음만
 let muted = false;
 const MAX_SAME = 4;
 const MUSIC_LEVEL = 0.45, SFX_LEVEL = 0.7;
@@ -37,7 +37,8 @@ export function unlock(onStart: () => void) {
   pauseLP.type = 'lowpass';
   pauseLP.frequency.value = 20000;
   pauseGain = ctx.createGain();
-  musicBus.connect(pauseLP).connect(pauseGain).connect(master);
+  levelGain = ctx.createGain();
+  musicBus.connect(pauseLP).connect(pauseGain).connect(levelGain).connect(master);
   noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -50,6 +51,11 @@ export function setPaused(on: boolean) {
   const t = ctx.currentTime;
   pauseLP.frequency.setTargetAtTime(on ? 380 : 20000, t, 0.05);
   pauseGain.gain.setTargetAtTime(on ? 0.45 : 1, t, 0.05);
+}
+
+// 브금을 오래 낮게 깔기 (예고 화면). 1이면 원래대로
+export function setMusicLevel(k: number) {
+  if (ctx) levelGain.gain.setTargetAtTime(k, ctx.currentTime, 0.25);
 }
 
 // 브금 낮추기: level까지 빠르게 내렸다가 hold초 뒤 release초에 걸쳐 복원

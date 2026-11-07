@@ -455,3 +455,49 @@ body.rec #dev, body.rec #dev-help, body.rec #fps { display: none !important; }
 
 /* 일시정지 중에는 게임 위 연출(막 자막, 말풍선, 진화, 보스 카드, 경고)의 애니메이션도 멈춘다 */
 body.paused #act, body.paused #act *, body.paused .officer, body.paused #evolve *, body.paused #bosscard *, body.paused #warn *, body.paused #allout, body.paused #allout *, body.paused #rush *, body.paused #combo * { animation-play-state: paused !important; }
+
+/* ── 에피소드 선택: 카드 2장 가로 ── */
+#episodes { position: fixed; inset: 0; z-index: 7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+  background: rgba(11, 14, 18, 0.88); animation: fadein 0.2s both; }
+#episodes h2 { margin: 0; font: 700 22px var(--sans); color: var(--ink); }
+#episodes .eps { display: flex; gap: 24px; }
+#episodes .ep { position: relative; width: min(300px, 38vw); aspect-ratio: 3 / 4; box-sizing: border-box; padding: 28px 26px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px;
+  text-align: left; cursor: pointer; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); color: var(--ink);
+  transition: transform 0.15s var(--ease), border-color 0.15s; }
+#episodes .ep.sel { border-color: var(--ally); transform: translateY(-4px); }
+#episodes .ep .num { font: 500 14px var(--sans); color: var(--dim); }
+#episodes .ep strong { font: 900 34px/1.2 var(--display); }
+#episodes .ep.locked { cursor: default; background: var(--bg); }
+#episodes .ep.locked .num, #episodes .ep.locked strong { opacity: 0.35; }
+#episodes .ep.locked.sel { border-color: var(--line); }
+#episodes .ep em { position: absolute; top: 24px; left: 26px; display: flex; align-items: center; gap: 8px; font: normal 500 13px var(--sans); color: var(--dim); }
+/* 자물쇠: 고리 + 몸통 */
+#episodes .lock { position: relative; width: 12px; height: 9px; margin-top: 6px; background: var(--dim); border-radius: 2px; }
+#episodes .lock::before { content: ''; position: absolute; left: 2px; top: -7px; width: 4px; height: 6px; border: 2px solid var(--dim); border-bottom: 0; border-radius: 5px 5px 0 0; }
+#episodes .ep.shake { animation: epshake 0.35s ease-in-out; }
+@keyframes epshake { 20% { translate: -6px 0; } 40% { translate: 5px 0; } 60% { translate: -3px 0; } 80% { translate: 2px 0; } }
+#episodes .hint { margin: 0; font: 400 13px var(--sans); color: var(--dim); }
+#episodes .toast { position: absolute; bottom: 12%; padding: 10px 18px; font: 500 15px var(--sans); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+#episodes .toast.on { animation: slideup 0.2s var(--ease) both; }
+
+/* ── 프롤로그 맨 처음: 에피소드 제목 ── */
+#prologue .epcard { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  font-family: var(--serif); color: var(--ink); opacity: 0; transition: opacity 0.35s; }
+#prologue .epcard.on { opacity: 1; }
+#prologue .epcard span { font-size: 16px; color: var(--dim); }
+#prologue .epcard strong { font-size: 34px; font-weight: 600; }
+
+/* ── 다음 이야기 예고 ── */
+#teaser { position: fixed; inset: 0; z-index: 9; display: flex; flex-direction: column; justify-content: center; padding: 0 12vw; gap: 28px; background: #000; animation: fadein 0.7s both; }
+#teaser .clear { margin: 0; font: 500 16px var(--sans); color: var(--ally); opacity: 0; transition: opacity 0.5s; }
+#teaser .lines { display: flex; flex-direction: column; gap: 14px; }
+#teaser .lines p { margin: 0; min-height: 1.75em; font: 400 21px/1.75 var(--serif); color: var(--ink); opacity: 0; }
+#teaser .on { opacity: 1 !important; }
+#teaser .typing::after { content: ''; display: inline-block; width: 1px; height: 1em; margin-left: 2px; vertical-align: -0.12em; background: var(--ink); animation: led 0.6s infinite; }
+#teaser .next { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; opacity: 0; }
+#teaser .next.on { animation: slideup 0.4s var(--ease) both; }
+#teaser .next strong { font: 900 52px/1.15 var(--display); color: var(--ink); }
+#teaser .next span { font: 400 15px var(--sans); color: var(--dim); }
+#teaser small { position: absolute; bottom: 36px; font: 400 12px var(--sans); color: var(--dim); }
+#teaser .key { left: 12vw; opacity: 0; transition: opacity 0.4s; }
+#teaser .skip { right: 48px; }

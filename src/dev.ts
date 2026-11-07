@@ -9,12 +9,13 @@ export interface DevHooks {
   phase(): string;
   info(): Record<string, number | string | null>;
   restartFromTop(): void; // 콜드 오픈부터 다시
-  typing(): boolean; // 이름 입력 중이면 H를 가로채지 않는다
+  typing(): boolean; // 이름 입력 중이면 H·T를 가로채지 않는다
+  teaser(): void; // 다음 이야기 예고 바로 보기
 }
 
 const HELP: [string, string][] = [
   ['F1', '2막으로'], ['F2', '3막으로'], ['F3', '보스 즉시 등장'], ['F4', '즉시 레벨업'], ['F5', '진화 재료 세팅'],
-  ['F6', '항생제 생성'], ['F7', '무적 토글'], ['F8', '녹화 모드 (FPS·DEV 숨김)'], ['F9', '적 500마리'], ['F10', '처음부터 다시 보기'], ['H', '이 목록'],
+  ['F6', '항생제 생성'], ['F7', '무적 토글'], ['F8', '녹화 모드 (FPS·DEV 숨김)'], ['F9', '적 500마리'], ['F10', '처음부터 다시 보기'], ['T', '예고 화면 바로 보기'], ['H', '이 목록'],
 ];
 
 export function installDev(h: DevHooks) {
@@ -29,7 +30,7 @@ export function installDev(h: DevHooks) {
   help.hidden = true;
   help.innerHTML = HELP.map(([k, v]) => `<div><kbd>${k}</kbd>${v}</div>`).join('');
   document.body.append(badge, help);
-  const label = () => { badge.textContent = god ? 'DEV · 무적' : 'DEV'; };
+  const label = () => { badge.textContent = god ? 'DEV 무적' : 'DEV'; };
   label();
 
   const actions: Record<string, (w: World) => void> = {
@@ -61,6 +62,11 @@ export function installDev(h: DevHooks) {
 
   // 캡처 단계에서 먼저 받아 게임 쪽 키 처리(아무 키나 시작 등)로 넘어가지 않게 한다
   addEventListener('keydown', (e) => {
+    if (e.code === 'KeyT' && !h.typing() && !e.repeat) {
+      h.teaser();
+      e.stopImmediatePropagation();
+      return;
+    }
     if (e.code === 'KeyH' && !h.typing()) {
       help.hidden = !help.hidden;
       e.stopImmediatePropagation();

@@ -23,11 +23,13 @@ export function createResult() {
   const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
   return {
-    show(w: World, onCard: () => void) {
+    // interlude: 엔딩 문장 뒤, 결과 카드 전에 끼워 넣을 화면 (승리 예고). 끝나면 next()를 부른다
+    show(w: World, onCard: () => void, interlude?: (next: () => void) => void) {
       ending.textContent = w.won ? dialogue.ending : dialogue.gameOver;
       ending.className = w.won ? 'won' : 'lost';
       ending.hidden = false;
-      timer = window.setTimeout(() => {
+      timer = window.setTimeout(() => (interlude ? interlude(showCard) : showCard()), ENDING_SHOW);
+      const showCard = () => {
         ending.hidden = true;
         const f = fields.find((x) => x.id === topField(w.result)) ?? fields[0];
         // 진화 재료가 된 카드는 진화 카드로 바뀌어 보인다
@@ -74,7 +76,7 @@ export function createResult() {
         };
         tick();
         onCard();
-      }, ENDING_SHOW);
+      };
     },
     hide() {
       clearTimeout(timer);

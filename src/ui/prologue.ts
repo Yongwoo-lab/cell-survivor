@@ -1,4 +1,4 @@
-// 프롤로그 (약 25초): 새벽 책상 → 기침·면역력 저하 → 렌즈로 몸속 진입 → 정보 장교 안내 → 몸을 지켜라! 3, 2, 1
+// 프롤로그 (약 27초): 에피소드 제목 → 새벽 책상 → 기침·면역력 저하 → 렌즈로 몸속 진입 → 정보 장교 안내 → 몸을 지켜라! 3, 2, 1
 // Space: 언제든 건너뛰기. 다른 키: 장교 대사 다음 줄.
 import dialogue from '../data/dialogue.json';
 import { sfx } from '../audio';
@@ -17,6 +17,7 @@ export function createPrologue(h: PrologueHooks) {
   root.hidden = true;
   root.innerHTML = `
     <div class="bg"></div>
+    <div class="epcard"><span>${dialogue.episodes[0].number}</span><strong>${dialogue.episodes[0].title}</strong></div>
     <div class="room"><div class="lamp"></div><div class="clock"></div><p class="night"></p></div>
     <div class="cough"></div><div class="warning"></div>
     <p class="dive"></p>
@@ -61,6 +62,11 @@ export function createPrologue(h: PrologueHooks) {
   });
 
   async function timeline() {
+    // ⓪ 에피소드 제목
+    show($('.epcard'));
+    await wait(1200);
+    show($('.epcard'), false);
+    await wait(400);
     // ① 새벽 3시, 책상 스탠드
     show(room);
     $('.clock').textContent = P.clock;
@@ -133,7 +139,7 @@ export function createPrologue(h: PrologueHooks) {
       root.className = '';
       bg.hidden = false;
       bg.style.setProperty('--lens', '0vmax');
-      for (const el of [room, cough, warning, dive, officer, call]) el.classList.remove('on');
+      for (const el of [room, cough, warning, dive, officer, call, $('.epcard')]) el.classList.remove('on');
       night.textContent = dive.textContent = line.textContent = '';
       timeline().then(() => { if (id === run) finish(); }, () => { /* 건너뜀 */ });
     },
