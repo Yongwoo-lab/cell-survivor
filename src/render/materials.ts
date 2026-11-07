@@ -12,6 +12,7 @@ interface GlassyOpts {
   emissiveIntensity?: number;
   wobble?: number;      // 표면 꿀렁임 진폭 (0이면 없음)
   softEdge?: boolean;   // 가장자리를 투명하게 → 초점 밖처럼 흐릿
+  tint?: boolean;       // 형광색을 인스턴스 색에서 가져옴 (발광·림 모두)
   depthWrite?: boolean;
 }
 
@@ -25,6 +26,7 @@ export function glassy(o: GlassyOpts) {
   mat.defines = {};
   if (o.wobble) mat.defines.WOBBLE = '';
   if (o.softEdge) mat.defines.SOFT_EDGE = '';
+  if (o.tint) mat.defines.TINT = '';
   const uniforms = {
     uTime: time,
     uRim: { value: new THREE.Color(o.rim) },
@@ -47,12 +49,21 @@ uniform float uTime; uniform float uWobble;`)
     s.fragmentShader = s.fragmentShader
       .replace('#include <common>', `#include <common>
 uniform vec3 uRim; uniform float uRimStrength; uniform float uRimPower;`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+#if defined(TINT) && defined(USE_COLOR)
+  totalEmissiveRadiance *= vColor.rgb; // r187: 인스턴스 색은 프래그먼트에서 USE_COLOR / vec4 vColor로 들어온다
+#endif`)
       .replace('#include <opaque_fragment>', `
+#if defined(TINT) && defined(USE_COLOR)
+  vec3 rimTint = vColor.rgb;
+#else
+  vec3 rimTint = vec3(1.0);
+#endif
   float fr = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), uRimPower);
 #ifdef SOFT_EDGE
   diffuseColor.a *= 1.0 - smoothstep(0.1, 0.9, fr);
 #else
-  outgoingLight += uRim * fr * uRimStrength;
+  outgoingLight += uRim * rimTint * fr * uRimStrength;
   diffuseColor.a = min(1.0, diffuseColor.a + fr * uRimStrength * 0.5);
 #endif
 #include <opaque_fragment>`);

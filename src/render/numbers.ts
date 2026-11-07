@@ -77,7 +77,7 @@ export function createNumbers(scene: THREE.Scene, camera: THREE.Camera) {
       let n = 0;
       for (const o of list) {
         const k = o.t / LIFE;
-        const pop = k < 0.15 ? 0.6 + (k / 0.15) * 0.7 : 1.3 - Math.min(0.3, (k - 0.15) * 1.5); // 튀어나왔다 살짝 줄어듦
+        const pop = k < 0.12 ? 0.85 + (k / 0.12) * 0.15 : 1; // 짧게 나타났다 떠오르며 사라짐
         const sc = pop * (o.crit ? 1.7 : 1);
         const alpha = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
         rz.setFromAxisAngle(Z, o.rot * k);
@@ -85,7 +85,7 @@ export function createNumbers(scene: THREE.Scene, camera: THREE.Camera) {
         p.set(o.x, o.y, o.z);
         s.setScalar(sc);
         m.compose(p, q, s);
-        const [r, g, b] = o.crit ? [1.3, 1.0, 0.25] : [0.92, 0.97, 1];
+        const [r, g, b] = o.crit ? [1.0, 0.82, 0.25] : [0.86, 0.9, 0.88];
         for (let j = 0; j < o.text.length && n < MAX_GLYPHS; j++, n++) {
           local.makeTranslation((j - (o.text.length - 1) / 2) * 0.36, 0, 0);
           mesh.setMatrixAt(n, local.premultiply(m));

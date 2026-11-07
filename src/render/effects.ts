@@ -31,7 +31,7 @@ export function createParticles(scene: THREE.Scene) {
         life[i] = maxLife[i] = 0.35 + Math.random() * 0.35;
         size[i] = 0.6 + Math.random() * 1.2;
         // 대부분 적 색, 일부는 흰 불꽃 (밝기 > 1 이라 bloom에 걸림)
-        color.copy(k % 4 === 0 ? white : base).multiplyScalar(2.2);
+        color.copy(k % 6 === 0 ? white : base).multiplyScalar(1.3);
         mesh.setColorAt(i, color);
       }
     },
@@ -72,7 +72,7 @@ export function createShockwaves(scene: THREE.Scene) {
     SHOCK_MAX,
   );
   mesh.frustumCulled = false;
-  const color = new THREE.Color(), base = new THREE.Color(0xfff2a8);
+  const color = new THREE.Color(), base = new THREE.Color(0xffe14a);
   for (let i = 0; i < SHOCK_MAX; i++) mesh.setColorAt(i, color);
   scene.add(mesh);
   const list: { x: number; z: number; r: number; t: number }[] = [];
@@ -87,7 +87,7 @@ export function createShockwaves(scene: THREE.Scene) {
         const k = s.t / SHOCK_TIME, sc = s.r * (0.3 + 0.7 * Math.sqrt(k));
         m.makeScale(sc, 1, sc).setPosition(s.x, 0.15, s.z);
         mesh.setMatrixAt(i, m);
-        mesh.setColorAt(i, color.copy(base).multiplyScalar(2.5 * (1 - k)));
+        mesh.setColorAt(i, color.copy(base).multiplyScalar(1.4 * (1 - k)));
       });
       mesh.count = list.length;
       mesh.instanceMatrix.needsUpdate = true;
@@ -154,7 +154,7 @@ const RAIN_MAX = 256, RAIN_SPEED = 28, RAIN_FROM = 9;
 export function createRain(scene: THREE.Scene) {
   const mesh = new THREE.InstancedMesh(
     new THREE.BoxGeometry(0.05, 0.7, 0.05),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff0a0).multiplyScalar(2.2) }),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe14a).multiplyScalar(1.2) }),
     RAIN_MAX,
   );
   mesh.frustumCulled = false;

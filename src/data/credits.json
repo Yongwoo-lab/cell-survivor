@@ -1,5 +1,8 @@
 [
-  { "type": "sound", "source": "Web Audio로 자체 합성" },
+  {
+    "type": "sound",
+    "source": "Web Audio로 자체 합성"
+  },
   {
     "type": "font",
     "name": "Black Han Sans",
@@ -15,5 +18,13 @@
     "license": "SIL Open Font License 1.1",
     "source": "https://github.com/orioncactus/pretendard",
     "licenseFile": "public/fonts/Pretendard-OFL.txt"
+  },
+  {
+    "type": "font",
+    "name": "IBM Plex Mono",
+    "author": "IBM Corp.",
+    "license": "SIL Open Font License 1.1",
+    "source": "https://fonts.google.com/specimen/IBM+Plex+Mono",
+    "licenseFile": "public/fonts/IBMPlexMono-OFL.txt"
   }
 ]

@@ -16,7 +16,7 @@ const BOSS = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 const BACILLUS = ENEMIES.findIndex((e) => e.id === 'bacillus');
 // 눈이 달린 적과 눈 크기(반지름 대비)
 const EYE_SIZE = Object.fromEntries(
-  (['coccus', 'bacillus', 'virus', 'resistantCoccus', 'superbug'] as const).map((id) => [ENEMIES.findIndex((e) => e.id === id), id === 'superbug' ? 0.36 : 0.62]),
+  (['coccus', 'bacillus', 'virus', 'resistantCoccus', 'superbug'] as const).map((id) => [ENEMIES.findIndex((e) => e.id === id), id === 'superbug' ? 0.28 : 0.42]),
 ) as Record<number, number>;
 
 // 게임 (x, y) → 화면 (x, z)
@@ -34,12 +34,12 @@ function createPlayerMesh() {
   }
   ng.computeVertexNormals();
   const nucleus = new THREE.Mesh(ng, glassy({
-    color: 0x2a1a6e, opacity: 0.9, rim: 0xb09cff, rimStrength: 2.2, rimPower: 1.8,
-    emissive: 0x3a24a0, emissiveIntensity: 0.6, depthWrite: true,
+    color: 0x18266e, opacity: 0.92, rim: 0x8fa8ff, rimStrength: 0.9, rimPower: 1.8,
+    emissive: 0x3358ff, emissiveIntensity: 0.85, depthWrite: true,
   }));
 
   const membrane = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), glassy({
-    color: 0x0f3a40, opacity: 0.12, rim: 0x3ff2e6, rimStrength: 1.4, rimPower: 2.8, wobble: 0.06,
+    color: 0x06200f, opacity: 0.1, rim: 0x4dff86, rimStrength: 1.15, rimPower: 2.6, wobble: 0.06,
   }));
   membrane.renderOrder = 1;
   group.add(nucleus, membrane);
@@ -150,15 +150,16 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   // 적: 재질은 흰색, 실제 색은 인스턴스 색 (번쩍임 = 밝은 흰색으로 교체)
   const kindColors = ENEMIES.map((d) => new THREE.Color(d.color));
   const flashColor = new THREE.Color(4, 4, 4);
+  // 적은 종류색(인스턴스 색)으로 스스로 빛난다: 세균 로다민, 바이러스 마젠타
   const enemyMat = glassy({
-    color: 0xffffff, opacity: 0.55, rim: 0xffb36b, rimStrength: 0.7,
-    emissive: 0x401200, emissiveIntensity: 0.6, depthWrite: true,
+    color: 0xffffff, opacity: 0.6, rim: 0xffffff, rimStrength: 0.75,
+    emissive: 0xffffff, emissiveIntensity: 0.42, depthWrite: true, tint: true,
   });
   const infectedMat = glassy({
-    color: 0xffffff, opacity: 0.45, rim: 0xd08cff, rimStrength: 0.9, emissive: 0x200830, wobble: 0.05, depthWrite: true,
+    color: 0xffffff, opacity: 0.45, rim: 0xffffff, rimStrength: 0.8, emissive: 0xffffff, emissiveIntensity: 0.3, wobble: 0.05, depthWrite: true, tint: true,
   });
   const bossMat = glassy({
-    color: 0xffffff, opacity: 0.75, rim: 0xff7080, rimStrength: 1.1, emissive: 0x300006, wobble: 0.1, depthWrite: true,
+    color: 0xffffff, opacity: 0.8, rim: 0xffffff, rimStrength: 0.9, emissive: 0xffffff, emissiveIntensity: 0.38, wobble: 0.1, depthWrite: true, tint: true,
   });
   // 종류마다 InstancedMesh 묶음 (구균은 포도송이 모양 4가지)
   const kindMeshes = ENEMIES.map((d) => {
@@ -175,11 +176,11 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
 
   // 정상 세포: 연분홍 막 + 핵
   const cellMem = instanced(new THREE.SphereGeometry(CELL.radius, 32, 20), glassy({
-    color: 0x8a4a5e, opacity: 0.22, rim: 0xffb0c8, rimStrength: 0.7, wobble: 0.04,
+    color: 0x1a2228, opacity: 0.2, rim: 0x7a9298, rimStrength: 0.45, wobble: 0.04,
   }), 64);
   cellMem.renderOrder = 1;
   const cellNuc = instanced(new THREE.SphereGeometry(CELL.radius * 0.38, 16, 12), glassy({
-    color: 0x5a2a4a, opacity: 0.8, rim: 0xd080a0, rimStrength: 0.5, depthWrite: true,
+    color: 0x101a50, opacity: 0.85, rim: 0x6a84ff, rimStrength: 0.4, emissive: 0x2a48c8, emissiveIntensity: 0.55, depthWrite: true,
   }), 64);
   scene.add(cellMem, cellNuc);
   const looks = Array.from({ length: LOOKS }, () => ({
@@ -190,13 +191,13 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   }));
 
   const shotGeo = new THREE.SphereGeometry(balance.shot.radius, 12, 8);
-  const shotMesh = instanced(shotGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9ffcff).multiplyScalar(2.5) }), 512);
-  const abShotMesh = instanced(shotGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff0a0).multiplyScalar(2.2) }), 512);
+  const shotMesh = instanced(shotGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xc8ffd8).multiplyScalar(0.9) }), 512);
+  const abShotMesh = instanced(shotGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe14a).multiplyScalar(0.95) }), 512);
 
   // 항체 표식: 표식 달린 적 위의 고리
   const markMesh = instanced(
     new THREE.TorusGeometry(COCCUS.radius * 1.9, 0.035, 6, 32).rotateX(Math.PI / 2),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff0a0).multiplyScalar(1.6), transparent: true, opacity: 0.9 }),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe14a).multiplyScalar(0.9), transparent: true, opacity: 0.75 }),
     MAX_ENEMIES,
   );
 
@@ -204,11 +205,17 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   const macroMax = Math.max(...cardData.cards.find((c) => c.id === 'macrophage')!.levels.map((l) => (l as { count: number }).count))
     + balance.evolutions.activatedMacrophage.extraCount;
   const macroMesh = instanced(new THREE.SphereGeometry(T.orbiterRadius, 32, 20), glassy({
-    color: 0x1a5a5a, opacity: 0.35, rim: 0x9ffff0, rimStrength: 1.3, emissive: 0x0a3a3a, depthWrite: true,
+    color: 0x0c3a1c, opacity: 0.3, rim: 0x4dff86, rimStrength: 1.0, emissive: 0x0d4a20, depthWrite: false,
   }), macroMax);
+  macroMesh.renderOrder = 1;
+  const nucMat = glassy({ color: 0x18266e, opacity: 0.9, rim: 0x8fa8ff, rimStrength: 0.6, emissive: 0x3358ff, emissiveIntensity: 0.7, depthWrite: true });
+  const macroNuc = instanced(new THREE.IcosahedronGeometry(T.orbiterRadius * 0.42, 2), nucMat, macroMax);
   const nkMesh = instanced(new THREE.IcosahedronGeometry(T.nkRadius, 2), glassy({
-    color: 0xe8ffff, opacity: 0.6, rim: 0xffffff, rimStrength: 1.6, emissive: 0x4fd8e0, emissiveIntensity: 0.8, depthWrite: true,
+    color: 0x1e6a34, opacity: 0.45, rim: 0xb0ffc8, rimStrength: 1.1, emissive: 0x2aa050, emissiveIntensity: 0.5, depthWrite: false,
   }), 8);
+  nkMesh.renderOrder = 1;
+  const nkNuc = instanced(new THREE.IcosahedronGeometry(T.nkRadius * 0.45, 1), nucMat, 8);
+  scene.add(macroNuc, nkNuc);
 
   // 호중구 NET: 바닥에 깔린 그물 원판 (가산 혼합, 색으로 서서히 사라짐)
   const netMesh = instanced(
@@ -218,7 +225,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   );
   const gemMesh = instanced(
     new THREE.OctahedronGeometry(0.2),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd36b).multiplyScalar(1.4) }),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xd8ff6a).multiplyScalar(0.85) }),
     2048,
   );
   scene.add(shotMesh, abShotMesh, gemMesh, markMesh, macroMesh, nkMesh, netMesh);
@@ -243,7 +250,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   const pillGeo = new THREE.CapsuleGeometry(0.28, 0.55, 6, 14).rotateZ(Math.PI / 2);
   const pp = pillGeo.attributes.position, pillCol = new Float32Array(pp.count * 3);
   for (let i = 0; i < pp.count; i++) {
-    const c = pp.getX(i) > 0 ? [1.6, 0.35, 0.4] : [1.6, 1.6, 1.6];
+    const c = pp.getX(i) > 0 ? [1.0, 0.22, 0.25] : [0.95, 0.95, 0.92];
     pillCol.set(c, i * 3);
   }
   pillGeo.setAttribute('color', new THREE.BufferAttribute(pillCol, 3));
@@ -255,7 +262,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   );
   scene.add(pillMesh, pillHalo);
   const infectColor = new THREE.Color(0xd65cff);
-  const netColor = new THREE.Color(0xbffcff), tmpColor = new THREE.Color();
+  const netColor = new THREE.Color(0x8affb0), tmpColor = new THREE.Color();
 
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
   const UP = new THREE.Vector3(0, 1, 0);
@@ -293,7 +300,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
       }
       if ((blinkIn -= dt) <= 0) { blinkT = 0.13; blinkIn = 2 + Math.random() * 3; }
       blinkT -= dt;
-      if (player.visible) eyes.pair(player.position, 1, 0.36, lookX, lookY, false, blinkT > 0);
+      if (player.visible) eyes.pair(player.position, 1, 0.3, lookX, lookY, false, blinkT > 0);
       for (let i = 0; i < w.enemies.count; i++) {
         const id = e.id[i], kind = e.kind[i], def = ENEMIES[kind];
         const ms = kindMeshes[kind], v = id % ms.length, j = counts[kind][v]++;
@@ -305,7 +312,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
         ms[v].setMatrixAt(j, m.compose(p, q, s));
         // 2페이즈 보스는 더 빨갛게 맥동하며 빛난다 (밝기 > 1 → bloom)
         const col = e.flash[i] > 0 ? flashColor
-          : kind === BOSS && w.boss.phase2 ? tmpColor.copy(kindColors[kind]).multiplyScalar(2.4 + Math.sin(t * 9) * 0.9)
+          : kind === BOSS && w.boss.phase2 ? tmpColor.copy(kindColors[kind]).multiplyScalar(1.7 + Math.sin(t * 9) * 0.5)
           : kindColors[kind];
         ms[v].setColorAt(j, col);
         const eye = EYE_SIZE[kind];
@@ -377,9 +384,10 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
         s.set(big * (1 + Math.sin(t * 6 + k) * 0.06), big, big * (1 - Math.sin(t * 6 + k) * 0.06));
         p.y = 0.8 * big;
         macroMesh.setMatrixAt(k, m.compose(p, q, s));
+        macroNuc.setMatrixAt(k, m);
       });
-      macroMesh.count = w.macro.length;
-      macroMesh.instanceMatrix.needsUpdate = true;
+      macroMesh.count = macroNuc.count = w.macro.length;
+      macroMesh.instanceMatrix.needsUpdate = macroNuc.instanceMatrix.needsUpdate = true;
 
       const u = w.nk.f;
       for (let k = 0; k < w.nk.count; k++) {
@@ -387,9 +395,10 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
         q.setFromAxisAngle(UP, t * 4 + k);
         s.setScalar(1);
         nkMesh.setMatrixAt(k, m.compose(p, q, s));
+        nkNuc.setMatrixAt(k, m);
       }
-      nkMesh.count = w.nk.count;
-      nkMesh.instanceMatrix.needsUpdate = true;
+      nkMesh.count = nkNuc.count = w.nk.count;
+      nkMesh.instanceMatrix.needsUpdate = nkNuc.instanceMatrix.needsUpdate = true;
 
       const n = w.nets.f;
       for (let k = 0; k < w.nets.count; k++) {

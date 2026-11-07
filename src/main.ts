@@ -1,6 +1,6 @@
 import './ui/fonts.css';
 import './ui/style.css';
-import { createWorld, updateWorld, type World } from './game/world';
+import { createWorld, updateWorld, ENEMIES, type World } from './game/world';
 import { selectCard } from './game/cards';
 import { addEnemy, kindOf } from './game/spawner';
 import { createBot, BOTS } from './game/bot';
@@ -31,6 +31,8 @@ let phase: Phase = 'title';
 let world: World = createWorld();
 let paused = false, idle = 0, demoPick = 0;
 let demoBot = createBot(BOTS.novice);
+let bossGlow = 0;
+const BOSS_KIND = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 
 const { scene, camera, composer, setGlow, setAct } = createScene();
 const view = createView(scene, camera);
@@ -204,8 +206,14 @@ function frame(now: number) {
   view.sync(world, dt, now / 1000);
   setAct(world.act, dt);
   followCamera(camera, view.player.position, dt);
-  // 슬로모션 동안 빛이 퍼지고, 카드 고르는 동안 은은하게 유지
-  setGlow(world.slowmo > 0 ? 1 - world.slowmo / balance.levelUp.slowmoTime : world.choosing ? 0.35 : 0);
+  // 빛 번짐은 레벨업·진화·보스 처치 순간에만
+  if (world.deaths.some((d) => d.kind === BOSS_KIND)) bossGlow = 1;
+  bossGlow = Math.max(0, bossGlow - realDt * 0.7);
+  setGlow(Math.max(
+    world.slowmo > 0 ? 1 - world.slowmo / balance.levelUp.slowmoTime : 0,
+    world.evoSlow > 0 ? world.evoSlow / balance.evolutions.slowmoTime : 0,
+    bossGlow,
+  ));
   composer.render();
   const inGame = phase === 'play' || phase === 'ending' || phase === 'demo';
   updateHud(inGame ? world : null);

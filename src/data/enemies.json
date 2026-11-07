@@ -6,7 +6,7 @@
     "speed": 1.2,
     "damage": 5,
     "xp": 1,
-    "color": "#ff9a3c",
+    "color": "#ff4a32",
     "science": "공 모양의 세균. 포도상구균처럼 여러 개가 포도송이 모양으로 뭉쳐 사는 경우가 많다.",
     "radius": 0.3,
     "spawnCount": 300
@@ -18,7 +18,7 @@
     "speed": 2.4,
     "damage": 7,
     "xp": 2,
-    "color": "#ffc04d",
+    "color": "#ff7a2e",
     "science": "막대 모양의 세균. 대장균처럼 꼬리 같은 편모를 돌려 헤엄치는 종류가 많다.",
     "radius": 0.35,
     "spawnCount": 0
@@ -30,7 +30,7 @@
     "speed": 1.8,
     "damage": 4,
     "xp": 1,
-    "color": "#d65cff",
+    "color": "#ff2bd6",
     "science": "스스로는 증식하지 못하고, 숙주 세포 안에 들어가 그 세포의 장치로 자신을 복제한다.",
     "radius": 0.18,
     "spawnCount": 0
@@ -42,7 +42,7 @@
     "speed": 0.3,
     "damage": 6,
     "xp": 4,
-    "color": "#a03cff",
+    "color": "#c43cff",
     "spawnVirusEvery": 6.0,
     "science": "바이러스가 들어간 세포. 안에서 바이러스가 계속 만들어지므로 NK세포나 T세포가 세포째 제거해야 한다.",
     "radius": 0.6,
@@ -55,7 +55,7 @@
     "speed": 0.8,
     "damage": 20,
     "xp": 50,
-    "color": "#ff2a3a",
+    "color": "#b0101c",
     "resistance": {
       "perHitStack": 0.01,
       "maxReduction": 0.6,
@@ -72,7 +72,7 @@
     "speed": 1.8,
     "damage": 6,
     "xp": 2,
-    "color": "#ff3b3b",
+    "color": "#e8202a",
     "science": "항생제에서 살아남은 세균의 자손이라 같은 항생제가 잘 듣지 않는다.",
     "radius": 0.3,
     "spawnCount": 0

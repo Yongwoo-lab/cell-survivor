@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { glassy } from './materials';
 
 const RBC_COUNT = 18;
-const DUST_COUNT = 700;
+const DUST_COUNT = 260;
 const HALF = 45; // 카메라 주변으로 반복(wrap)되는 영역의 절반 크기
 
 // 가운데가 오목한 원반 (Evans–Fung 단면식을 반지름 1로 정규화)
@@ -32,8 +32,9 @@ function dotTexture() {
 const wrap = (v: number, center: number) => center + ((((v - center + HALF) % (2 * HALF)) + 2 * HALF) % (2 * HALF)) - HALF;
 
 export function addBackground(scene: THREE.Scene, camera: THREE.Camera) {
+  // 적혈구는 형광을 내지 않는다: 초점 밖의 아주 흐린 갈색 그림자
   const rbc = new THREE.InstancedMesh(rbcGeometry(), glassy({
-    color: 0x7a1a2c, opacity: 0.4, rim: 0, rimStrength: 0, rimPower: 1.5, softEdge: true,
+    color: 0x3a2418, opacity: 0.22, rim: 0, rimStrength: 0, rimPower: 1.2, softEdge: true,
   }), RBC_COUNT);
   rbc.renderOrder = -1;
   rbc.frustumCulled = false;
@@ -52,7 +53,7 @@ export function addBackground(scene: THREE.Scene, camera: THREE.Camera) {
   const dustGeo = new THREE.BufferGeometry();
   dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3).setUsage(THREE.DynamicDrawUsage));
   const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
-    size: 0.18, map: dotTexture(), color: 0x9fd8e0, transparent: true, opacity: 0.35, depthWrite: false,
+    size: 0.34, map: dotTexture(), color: 0x7d8796, transparent: true, opacity: 0.12, depthWrite: false,
   }));
   dust.frustumCulled = false;
   scene.add(rbc, dust);
