@@ -100,7 +100,7 @@ export function createShockwaves(scene: THREE.Scene) {
 const POP_MAX = 32, POP_TIME = 0.8;
 
 // "내성!" 표시: 같은 글자 텍스처를 쓰는 평면, 카메라를 향하고 위로 떠오르며 줄어든다
-export function createPopups(scene: THREE.Scene, camera: THREE.Camera, text: string) {
+export function createPopups(scene: THREE.Scene, camera: THREE.Camera, text: string, color = '#8C9099') {
   const c = document.createElement('canvas');
   c.width = 320; c.height = 96;
   const g = c.getContext('2d')!;
@@ -114,7 +114,7 @@ export function createPopups(scene: THREE.Scene, camera: THREE.Camera, text: str
     g.lineWidth = 10;
     g.strokeStyle = 'rgba(20, 20, 24, 0.9)';
     g.strokeText(text, 160, 50);
-    g.fillStyle = '#8C9099';
+    g.fillStyle = color;
     g.fillText(text, 160, 50);
   };
   draw();

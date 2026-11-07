@@ -401,6 +401,32 @@ const tests = {
   },
 
   // 저장소가 비었거나 깨졌을 때
+  // 러시·정예·보급품
+  async events() {
+    const { page, ctx } = await open('events');
+    await startPlay(page);
+    await press(page, 'F7'); // 무적
+    await page.evaluate(() => { const w = window.__qa.world(); w.time = 33.5; });
+    check('events: rush warning banner', await waitVisible(page, '#rush strong', 3000));
+    await sleep(2500);
+    const rush = await page.evaluate(() => { const w = window.__qa.world(), e = w.enemies.f; let b = 0; for (let i = 0; i < w.enemies.count; i++) if (e.boost[i] > 1) b++; return { b, track: window.__qa.info().track, rush: w.rush }; });
+    check('events: rush rings surround the player', rush.b >= 10 && rush.rush > 0, JSON.stringify(rush));
+    await page.evaluate(() => { const w = window.__qa.world(); w.nextElite = w.time; });
+    await sleep(400);
+    const elite = await page.evaluate(() => { const w = window.__qa.world(), e = w.enemies.f; for (let i = 0; i < w.enemies.count; i++) if (e.elite[i]) { e.hp[i] = 0; return true; } return false; });
+    await sleep(400);
+    const drops = await page.evaluate(() => window.__qa.world().drops.count);
+    check('events: elite drops a supply', elite && drops >= 1, `elite ${elite}, drops ${drops}`);
+    const picked = await page.evaluate(async () => {
+      const w = window.__qa.world(), d = w.drops.f;
+      d.x[0] = w.player.x; d.y[0] = w.player.y;
+      await new Promise((r) => setTimeout(r, 400));
+      return w.drops.count;
+    });
+    check('events: supply is picked up', picked === drops - 1, `${drops}→${picked}`);
+    await ctx.close();
+  },
+
   async storage() {
     for (const [label, init] of [['empty', () => localStorage.clear()], ['corrupt', () => {
       localStorage.setItem('cell-survivor-ranking', '{broken');

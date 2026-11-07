@@ -211,6 +211,37 @@
     "bossHpPerUse": 0.1,
     "popupInterval": 0.3
   },
+  "rush": {
+    "_comment": "대량 감염 경보: firstAt초부터 every초마다 (보스 경고 전까지). warning초 경고 뒤 duration초 동안 rings번 원형으로 둘러싼다",
+    "firstAt": 35,
+    "every": 30,
+    "warning": 2,
+    "duration": 5,
+    "rings": 2,
+    "radius": 14,
+    "gap": 0.3,
+    "speedMul": 1.3,
+    "hpMul": 0.5,
+    "counts": [16, 20, 24, 28],
+    "kinds": ["coccus", "coccus", "bacillus"]
+  },
+  "elite": {
+    "_comment": "정예: firstAt초부터 every초마다 하나. 체력·크기·경험치 배수. 잡으면 보급품",
+    "firstAt": 20,
+    "every": 15,
+    "kinds": ["coccus", "bacillus"],
+    "hpMul": 4,
+    "sizeMul": 1.7,
+    "xpMul": 3
+  },
+  "drops": {
+    "types": ["heal", "magnet", "bomb"],
+    "life": 18,
+    "pickupRadius": 1.2,
+    "heal": 0.3,
+    "viewRadius": 17,
+    "bombDamage": 60
+  },
   "juice": {
     "comboWindow": 1.5,
     "comboTiers": [

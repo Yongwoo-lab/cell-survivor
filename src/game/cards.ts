@@ -68,7 +68,7 @@ export function selectCard(w: World, idx: number) {
   if (--w.pendingLevels > 0) w.slowmo = balance.levelUp.slowmoTime;
 }
 
-export type Source = 'shot' | 'macrophage' | 'net' | 'complement' | 'nk' | 'antibody';
+export type Source = 'shot' | 'macrophage' | 'net' | 'complement' | 'nk' | 'antibody' | 'bomb';
 
 // 표식(항체)·기억세포 보너스가 모든 공격에 곱해진다.
 // 내성이 있는 적(보스)은 같은 공격 종류를 맞을수록 그 종류의 피해가 줄어든다. stack: 지속 피해는 dt만큼만 쌓임.
@@ -161,7 +161,7 @@ function burst(w: World, x: number, y: number, cp: Lv, depth: number, self: numb
   const dur = cardLevel(w, 'antibody')?.markDuration ?? 4;
   let branches = 0;
   w.hash.query(x, y, cp.splashRadius + MAX_RADIUS, (j) => {
-    const r = cp.splashRadius + RADIUS[e.kind[j]];
+    const r = cp.splashRadius + RADIUS[e.kind[j]] * e.size[j];
     if (j === self || e.hp[j] <= 0 || (e.x[j] - x) ** 2 + (e.y[j] - y) ** 2 > r * r) return;
     damageEnemy(w, j, cp.burstDamage * (depth ? dmgMul : T.complementSplashRatio), 'complement');
     if (!classical) return;
@@ -198,7 +198,7 @@ export function updateCards(w: World, dt: number) {
           const d = Math.sqrt(d2), step = Math.min(d, am.pullSpeed * dt);
           e.x[i] += (dx / d) * step; e.y[i] += (dy / d) * step;
         }
-        const r = orbR + RADIUS[e.kind[i]];
+        const r = orbR + RADIUS[e.kind[i]] * e.size[i];
         if (e.macroCd[i] > 0 || d2 > r * r) return;
         damageEnemy(w, i, dmg, 'macrophage');
         e.macroCd[i] = T.macroHitInterval;
@@ -281,7 +281,7 @@ export function updateCards(w: World, dt: number) {
         const step = Math.min(d, speed * dt);
         u.x[k] += (dx / d) * step; u.y[k] += (dy / d) * step;
       }
-      if (u.cd[k] <= 0 && target >= 0 && d < T.nkRadius + RADIUS[e.kind[target]]) {
+      if (u.cd[k] <= 0 && target >= 0 && d < T.nkRadius + RADIUS[e.kind[target]] * e.size[target]) {
         damageEnemy(w, target, nk.damage, 'nk');
         u.cd[k] = nk.cooldown / atkMul(w);
         target = -2; // 다음 NK는 새로 고른다 (같은 적이어도 됨)

@@ -20,7 +20,7 @@ const CROWD = 220; // 화면 적이 이만큼이면 음악 강도 최대
 // menu: 타이틀·자동 시연 (타이틀 곡)
 export function soundFrame(w: World, withSfx: boolean, menu = false) {
   setTrack(menu ? 'title' : w.over ? (w.won ? 'win' : 'lose') : w.boss.spawned ? 'boss' : ACT_TRACKS[w.act]);
-  setIntensity(w.enemies.count / CROWD);
+  setIntensity(w.rush > 0 || w.rushWarn > 0 ? 1 : w.enemies.count / CROWD); // 러시 중 최대
   if (w !== seenWorld) { seenWorld = w; prevAct = -1; prevSlowmo = 0; prevEvolved = 0; }
   if (!withSfx) return;
   if (w.fx.shot) sfx.shot();
@@ -28,6 +28,7 @@ export function soundFrame(w: World, withSfx: boolean, menu = false) {
   if (w.fx.pickup) sfx.pickup();
   if (w.fx.hurt) sfx.hurt();
   if (w.fx.pill) sfx.pill();
+  if (w.pickups.length) sfx.supply();
   if (w.evolveLog.length > prevEvolved) { sfx.evolve(); stinger('evolve'); }
   prevEvolved = w.evolveLog.length;
   // 보스 처치 소리는 처치 연출(main의 승리 시퀀스)에서 낸다

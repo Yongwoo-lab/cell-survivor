@@ -5,6 +5,7 @@ import { Pool } from './pool';
 import { SpatialHash } from './collision';
 import { updateSpawner, addEnemy, kindOf, BOSS } from './spawner';
 import { updateBoss, updateSpikes } from './boss';
+import { updateEvents, dropSupply } from './events';
 import { type FieldCounts } from './result';
 import { type Pick, cardLevel, updateCards, damageEnemy, drawCards, fireShot, nearestEnemies, atkMul, MAX_RADIUS, FLASH_TIME } from './cards';
 
@@ -26,7 +27,7 @@ export function createWorld() {
     player: { x: 0, y: 0, hp: P.hp, maxHp: P.hp, invuln: 0, xp: 0, level: 1, xpToNext: Math.round(X.base * X.firstLevelMul) },
     // silent: 처치가 아니라 사라짐 (바이러스가 세포에 들어감) → 조각·처치 수 없음
     // squint: 맞았을 때 눈을 찡그리는 시간 (화면 연출용)
-    enemies: new Pool(MAX_ENEMIES, ['x', 'y', 'hp', 'flash', 'id', 'kind', 'mark', 'macroCd', 'spawnCd', 'silent', 'squint'] as const),
+    enemies: new Pool(MAX_ENEMIES, ['x', 'y', 'hp', 'flash', 'id', 'kind', 'mark', 'macroCd', 'spawnCd', 'silent', 'squint', 'size', 'boost', 'elite'] as const), // size·boost: 정예 크기, 러시 속도 배수
     cells: new Pool(64, ['x', 'y'] as const), // 움직이지 않는 정상 세포 (2막~)
     cellsPlaced: false,
     act: 0,
@@ -83,6 +84,14 @@ export function createWorld() {
     slowmo: 0, // 레벨업 슬로모션 남은 실시간(초)
     pendingLevels: 0,
     choosing: null as Pick[] | null, // 카드 선택 중이면 게임 정지
+    // 러시(대량 감염 경보)·정예·보급품
+    rush: 0, // >0 이면 러시 남은 초
+    rushWarn: 0, // >0 이면 러시까지 남은 초 (경고)
+    rushN: 0, // 지금까지 시작한 러시 수
+    rushRings: 0,
+    nextElite: balance.elite.firstAt,
+    drops: new Pool(16, ['x', 'y', 'type', 'life'] as const), // type: balance.drops.types 번호
+    pickups: [] as { x: number; y: number; type: number }[], // 이번 프레임 주운 보급품
   };
 }
 export type World = ReturnType<typeof createWorld>;
@@ -97,6 +106,7 @@ export function clearEvents(w: World) {
   w.rain.length = 0;
   w.noEffectHits.length = 0;
   w.dmgNums.length = 0;
+  w.pickups.length = 0;
 }
 
 export function updateWorld(w: World, realDt: number, move: Vec2) {
@@ -125,7 +135,8 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
   pl.invuln -= dt;
 
   while (w.act + 1 < balance.acts.length && w.time >= balance.acts[w.act + 1].start) w.act++;
-  updateSpawner(w, dt);
+  updateSpawner(w, w.rush > 0 ? 0 : dt); // 러시 동안은 평소 등장을 쉬고 러시가 대신한다
+  updateEvents(w, dt);
 
   // 보스 내성은 시간이 지나면 회복
   const bossRes = enemies[BOSS].resistance!;
@@ -192,8 +203,8 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     const d = Math.hypot(dx, dy) || 1;
     if (e.kind[i] === BOSS && d > B.catchUpBeyond) mul *= B.catchUpMul; // 보스는 멀어지면 빠르게 따라붙는다
     if (e.kind[i] === BOSS && w.bossAtk.state !== 'idle') mul = 0; // 예고·돌진 중에는 패턴이 움직인다
-    e.x[i] += (dx / d) * def.speed * mul * dt;
-    e.y[i] += (dy / d) * def.speed * mul * dt;
+    e.x[i] += (dx / d) * def.speed * mul * e.boost[i] * dt;
+    e.y[i] += (dy / d) * def.speed * mul * e.boost[i] * dt;
     e.flash[i] -= dt;
     e.mark[i] -= dt;
     e.macroCd[i] -= dt;
@@ -221,10 +232,10 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
 
   // 적끼리 겹치지 않게 밀어냄
   for (let i = 0; i < E.count; i++) {
-    const ri = enemies[e.kind[i]].radius;
+    const ri = enemies[e.kind[i]].radius * e.size[i];
     w.hash.query(e.x[i], e.y[i], ri + MAX_RADIUS, (j) => {
       if (j <= i) return;
-      const minD = ri + enemies[e.kind[j]].radius;
+      const minD = ri + enemies[e.kind[j]].radius * e.size[j];
       const dx = e.x[j] - e.x[i], dy = e.y[j] - e.y[i];
       const d2 = dx * dx + dy * dy;
       if (d2 >= minD * minD || d2 === 0) return;
@@ -259,7 +270,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     s.life[k] -= dt;
     let hit = false;
     w.hash.query(s.x[k], s.y[k], S.radius + MAX_RADIUS, (i) => {
-      const r = S.radius + enemies[e.kind[i]].radius;
+      const r = S.radius + enemies[e.kind[i]].radius * e.size[i];
       if (e.hp[i] <= 0 || (e.x[i] - s.x[k]) ** 2 + (e.y[i] - s.y[k]) ** 2 > r * r) return;
       if (s.kind[k] === 1) {
         if (ab) e.mark[i] = ab.markDuration;
@@ -275,7 +286,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
   // 적이 플레이어에 닿으면 피해 (맞은 뒤 잠깐 무적)
   if (pl.invuln <= 0) {
     w.hash.query(pl.x, pl.y, P.radius + MAX_RADIUS, (i) => {
-      const def = enemies[e.kind[i]], r = P.radius + def.radius;
+      const def = enemies[e.kind[i]], r = P.radius + def.radius * e.size[i];
       if (e.hp[i] <= 0 || (e.x[i] - pl.x) ** 2 + (e.y[i] - pl.y) ** 2 > r * r) return;
       pl.hp = Math.max(0, pl.hp - def.damage);
       pl.invuln = P.invulnTime;
@@ -299,8 +310,9 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     const g = w.gems.add();
     if (g >= 0) {
       const gf = w.gems.f;
-      gf.x[g] = e.x[i]; gf.y[g] = e.y[i]; gf.xp[g] = enemies[kind].xp; gf.pulled[g] = 0;
+      gf.x[g] = e.x[i]; gf.y[g] = e.y[i]; gf.xp[g] = enemies[kind].xp * (e.elite[i] ? balance.elite.xpMul : 1); gf.pulled[g] = 0;
     }
+    if (e.elite[i]) dropSupply(w, e.x[i], e.y[i]);
     E.remove(i);
   }
 

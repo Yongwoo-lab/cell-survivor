@@ -35,6 +35,8 @@ export function createBot(skill: BotSkill) {
         if (!wantPill.has(key)) wantPill.set(key, Math.random() < PILL_CHANCE);
         if (wantPill.get(key)) return (move = { x: pf.x[k] - pl.x, y: pf.y[k] - pl.y });
       }
+      const df = w.drops.f;
+      if (w.drops.count) return (move = { x: df.x[0] - pl.x, y: df.y[0] - pl.y }); // 보급품은 줍는다
       const g = w.gems.f;
       let best = -1, bd = 64;
       for (let i = 0; i < w.gems.count; i++) {

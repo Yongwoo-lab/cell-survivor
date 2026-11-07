@@ -34,7 +34,12 @@ export function createStory() {
   const bossCard = document.createElement('div');
   bossCard.id = 'bosscard';
   bossCard.innerHTML = `<div class="band"><strong>${dialogue.ui.bossCard.name}</strong><span>${dialogue.ui.bossCard.sub}</span></div>`;
-  document.body.append(act, officer, warn, allOut, evolve, bossCard);
+  // 대량 감염 경보: 경고 동안 크게, 러시 중에는 가장자리만 붉게 맥동
+  const rush = document.createElement('div');
+  rush.id = 'rush';
+  rush.hidden = true;
+  rush.innerHTML = `<div class="edge"></div><strong>${dialogue.ui.rushWarning}</strong>`;
+  document.body.append(act, officer, warn, allOut, evolve, bossCard, rush);
   let bossShown = false;
 
   let lastAct = -1, seen = 0, notes = 0, evolved = 0;
@@ -60,7 +65,7 @@ export function createStory() {
       lastAct = -1; seen = 0; notes = 0; evolved = 0; queue.length = 0; bossShown = false;
       actLeft = officerLeft = officerBusy = evolveLeft = bossLeft = 0; typingLine = '';
       bossCard.classList.remove('on');
-      act.classList.remove('on'); officer.classList.remove('on'); warn.hidden = true; allOut.hidden = true; evolve.hidden = true;
+      act.classList.remove('on'); officer.classList.remove('on'); warn.hidden = true; allOut.hidden = true; evolve.hidden = true; rush.hidden = true;
     },
     update(w: World, sound = true, dtMs = 16) {
       const tick = (left: number, el: HTMLElement, off: () => void) => { if (left > 0 && (left -= dtMs) <= 0) off(); return left; };
@@ -107,6 +112,10 @@ export function createStory() {
         evolve.hidden = false;
         evolveLeft = EVOLVE_SHOW;
       }
+      const rushOn = (w.rushWarn > 0 || w.rush > 0) && !w.over;
+      if (w.rushWarn > 0 && rush.hidden && sound) sfx.siren(w.rushWarn + 0.4);
+      rush.hidden = !rushOn;
+      rush.classList.toggle('live', w.rush > 0);
       // 보스 경고: 켜지는 순간 사이렌
       const warnOn = w.bossWarn > 0;
       if (warnOn && warn.hidden && sound) sfx.siren(w.bossWarn);

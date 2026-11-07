@@ -16,7 +16,8 @@ export function addEnemy(w: World, kind: number, x: number, y: number) {
   e.x[i] = x; e.y[i] = y;
   e.kind[i] = kind;
   e.hp[i] = def.hp;
-  e.flash[i] = e.mark[i] = e.macroCd[i] = e.silent[i] = e.squint[i] = 0;
+  e.flash[i] = e.mark[i] = e.macroCd[i] = e.silent[i] = e.squint[i] = e.elite[i] = 0;
+  e.size[i] = e.boost[i] = 1;
   e.spawnCd[i] = def.spawnVirusEvery ?? 0;
   e.id[i] = w.nextId++;
   if (!w.seen.includes(kind)) w.seen.push(kind);

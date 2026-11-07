@@ -81,6 +81,12 @@ export const sfx = {
     noise(o, t, { dur: 0.25, vol: 0.05, filter: 'bandpass', f0: 4000, f1: 1500, q: 3 });
     return 0.25;
   }),
+  // 보급품: 밝게 올라가는 세 음
+  supply: () => voice('supply', (t, o) => {
+    [880, 1318.5, 1760].forEach((f, i) => tone(o, t, { type: 'triangle', f0: f, dur: 0.22, vol: 0.12, at: i * 0.06 }));
+    noise(o, t, { dur: 0.3, vol: 0.04, filter: 'highpass', f0: 6000 });
+    return 0.4;
+  }),
   evolve: () => voice('evolve', (t, o) => {
     duckMusic(0.3, 0.6);
     [523.25, 783.99, 1046.5, 1568, 2093].forEach((f, i) => {

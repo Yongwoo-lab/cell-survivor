@@ -12,7 +12,7 @@ import { createNumbers } from './numbers';
 import { shake } from './camera';
 
 const COCCUS = ENEMIES.find((e) => e.id === 'coccus')!;
-const T = balance.cardTuning, CELL = balance.cells;
+const T = balance.cardTuning, CELL = balance.cells, DROP_TYPES = balance.drops.types;
 const BOSS = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 const BACILLUS = ENEMIES.findIndex((e) => e.id === 'bacillus');
 // 눈이 달린 적과 눈 크기(반지름 대비)
@@ -326,6 +326,23 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
     8,
   );
   scene.add(pillMesh, pillHalo);
+  // 정예: 몸 바깥으로 빛나는 테두리 (뒷면만 그린 큰 껍질, 가산 혼합)
+  const eliteGlow = instanced(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({
+    color: new THREE.Color(0xe2b857).multiplyScalar(0.8), side: THREE.BackSide, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false,
+  }), 64);
+  // 보급품: 회복(초록 십자) / 자석(파란 말굽) / 폭발(금색 별)
+  const DROP_COLORS = [0x7bd88f, 0x6e9bff, 0xe2b857];
+  const dropGeos = [
+    mergeGeometries([new THREE.BoxGeometry(0.62, 0.2, 0.2), new THREE.BoxGeometry(0.2, 0.62, 0.2)]),
+    new THREE.TorusGeometry(0.26, 0.08, 8, 20, Math.PI).rotateZ(Math.PI),
+    new THREE.OctahedronGeometry(0.34, 0),
+  ];
+  const dropMeshes = dropGeos.map((g, k) => instanced(g, new THREE.MeshBasicMaterial({ color: new THREE.Color(DROP_COLORS[k]).multiplyScalar(1.3) }), 16));
+  const dropHalo = instanced(new THREE.RingGeometry(0.62, 0.74, 32).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false }), 16, new THREE.Color(1, 1, 1));
+  scene.add(eliteGlow, ...dropMeshes, dropHalo);
+  const dropPops = DROP_TYPES.map((t, k) => createPopups(scene, camera, (dialogue.ui.drops as Record<string, string>)[t], `#${DROP_COLORS[k].toString(16).padStart(6, '0')}`));
+  const dropColor = DROP_COLORS.map((c) => new THREE.Color(c));
   const infectColor = new THREE.Color(0xd65cff);
   const netColor = new THREE.Color(0x7bd88f), tmpColor = new THREE.Color();
 
@@ -368,7 +385,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
 
       const e = w.enemies.f;
       for (const c of counts) c.fill(0);
-      let marks = 0, bossAt = -1;
+      let marks = 0, bossAt = -1, elites = 0;
       eyes.begin();
 
       // 백혈구 눈
@@ -387,17 +404,25 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
         p.set(e.x[i], def.radius + 0.1 + Math.sin(t * 2 + id) * 0.15, e.y[i]);
         if (kind === BACILLUS) q.setFromAxisAngle(UP, -Math.atan2(w.player.y - e.y[i], w.player.x - e.x[i]));
         else q.setFromAxisAngle(look.axis, look.phase + t * look.spin * (kind === BOSS ? 0.3 : 1));
-        s.setScalar(kind === BOSS ? 1 : look.scale);
+        const size = e.size[i];
+        if (size !== 1) p.y = def.radius * size + 0.1;
+        s.setScalar((kind === BOSS ? 1 : look.scale) * size);
         ms[v].setMatrixAt(j, m.compose(p, q, s));
+        if (e.elite[i] && elites < 64) {
+          s.setScalar(def.radius * size * (kind === BACILLUS ? 1.9 : 1.35) * (1 + Math.sin(t * 5 + id) * 0.05));
+          if (kind === BACILLUS) s.set(s.x, s.y * 0.6, s.z * 0.6);
+          eliteGlow.setMatrixAt(elites++, m.compose(p, q, s));
+        }
         // 2페이즈 보스는 더 빨갛게 맥동하며 빛난다 (밝기 > 1 → bloom)
         const col = e.flash[i] > 0 ? flashColor
           : kind === BOSS && w.boss.phase2 ? tmpColor.copy(kindColors[kind]).multiplyScalar(1.7 + Math.sin(t * 9) * 0.5)
+          : e.elite[i] ? tmpColor.copy(kindColors[kind]).multiplyScalar(1.6)
           : kindColors[kind];
         ms[v].setColorAt(j, col);
         const eye = EYE_SIZE[kind];
         if (eye) {
           // 적은 플레이어를 쳐다본다 (화면 위쪽 = 게임 -y)
-          const r = def.radius * (kind === BOSS ? 1 : look.scale);
+          const r = def.radius * (kind === BOSS ? 1 : look.scale) * e.size[i];
           const dx = w.player.x - e.x[i], dy = w.player.y - e.y[i], l = Math.hypot(dx, dy) || 1;
           eyes.pair(eyeC.copy(p), r, r * eye * 2, dx / l, -dy / l, e.squint[i] > 0, false, EYE_STYLE[kind]);
           if (kind === BOSS) bossAt = i;
@@ -418,6 +443,8 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
           browMesh.setMatrixAt(side < 0 ? 0 : 1, m.compose(eyes.browPos(p, r, side, browP), q, s));
         }
       }
+      eliteGlow.count = elites;
+      eliteGlow.instanceMatrix.needsUpdate = true;
       browMesh.count = bossAt >= 0 ? 2 : 0;
       browMesh.instanceMatrix.needsUpdate = true;
       eyes.end();
@@ -568,6 +595,27 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
         s.setScalar(blink ? 0 : 1 + Math.sin(t * 5) * 0.12);
         pillHalo.setMatrixAt(k, m.compose(p, q, s));
       }
+      const df = w.drops.f, dropN = [0, 0, 0];
+      for (let k = 0; k < w.drops.count; k++) {
+        const type = df.type[k], blink = df.life[k] < 3 && Math.floor(t * 8) % 2 === 0;
+        p.set(df.x[k], 0.7 + Math.sin(t * 3 + k) * 0.15, df.y[k]);
+        q.setFromAxisAngle(UP, t * 2 + k);
+        s.setScalar(blink ? 0 : 1);
+        dropMeshes[type].setMatrixAt(dropN[type]++, m.compose(p, q, s));
+        p.y = 0.05;
+        s.setScalar(blink ? 0 : 1 + Math.sin(t * 5 + k) * 0.12);
+        dropHalo.setMatrixAt(k, m.compose(p, q, s));
+        dropHalo.setColorAt(k, dropColor[type]);
+      }
+      dropMeshes.forEach((dm, k) => { dm.count = dropN[k]; dm.instanceMatrix.needsUpdate = true; });
+      dropHalo.count = w.drops.count;
+      dropHalo.instanceMatrix.needsUpdate = true;
+      if (dropHalo.instanceColor) dropHalo.instanceColor.needsUpdate = true;
+      for (const pk of w.pickups) {
+        dropPops[pk.type].add(pk.x, 2.2, pk.y);
+        particles.burst(pk.x, 0.6, pk.y, dropColor[pk.type], 24, 1.2);
+      }
+      dropPops.forEach((dp) => dp.update(dt));
       pillMesh.count = pillHalo.count = w.pills.count;
       pillMesh.instanceMatrix.needsUpdate = pillHalo.instanceMatrix.needsUpdate = true;
       for (const b of w.bursts) {
