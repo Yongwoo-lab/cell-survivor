@@ -240,7 +240,7 @@ const pause = createPause((a) => {
   else if (a === 'sound') { mute(); pause.refresh(); }
   else if (a === 'codex') codex.open();
   else { setPause(false); toTitle(); }
-}, isMuted);
+}, isMuted, () => world);
 pause.btn.addEventListener('click', () => { if (canPause()) setPause(!paused); });
 
 const canPause = () => phase === 'play' && !world.choosing && !world.over;

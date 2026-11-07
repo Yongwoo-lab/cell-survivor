@@ -290,6 +290,13 @@ const tests = {
     check('edges: card key mashing picks exactly one', after - before === 1, `${before}→${after}`);
     await press(page, 'Escape');
     await waitPhase(page, 'paused', 2000);
+    await sleep(300);
+    const pz = await page.evaluate(() => {
+      const r = document.querySelector('#pause .pz')?.getBoundingClientRect();
+      return { centered: !!r && Math.abs(r.left + r.width / 2 - innerWidth / 2) < 4, stats: document.querySelectorAll('#pause .stats div').length,
+        slots: document.querySelectorAll('#pause .slot').length, blur: getComputedStyle(document.querySelector('#pause')).backdropFilter };
+    });
+    check('edges: pause panel centered with run progress', pz.centered && pz.stats === 4 && pz.slots >= 1 && pz.blur.includes('blur'), JSON.stringify(pz));
     const m0 = await visible(page, '#muted');
     await press(page, 'KeyM');
     const m1 = await visible(page, '#muted');

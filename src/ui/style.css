@@ -297,16 +297,47 @@ button { font: inherit; color: inherit; }
 .rk li.empty { display: block; color: var(--dim); }
 .rk .back { margin: 14px 24px 0; }
 
-/* ── 일시정지: 왼쪽에 세로로 긴 각진 패널 ── */
-#pause { position: fixed; inset: 0; z-index: 7; background: rgba(11, 14, 18, 0.7); animation: fadein 0.15s both; }
-.pz { position: absolute; left: 0; top: 0; bottom: 0; width: min(320px, 80vw); box-sizing: border-box; padding: 72px 0 40px; display: flex; flex-direction: column; gap: 2px;
-  background: var(--surface); border-right: 1px solid var(--line); border-radius: 0 var(--r) var(--r) 0; animation: panelin 0.2s var(--ease) both; }
-@keyframes panelin { from { transform: translateX(-24px); opacity: 0; } }
-.pz h2 { margin: 0 32px 24px; font: 700 22px var(--sans); color: var(--ink); }
-.pz button { position: relative; padding: 11px 32px; text-align: left; font: 400 16px var(--sans); color: var(--dim); cursor: pointer; background: none; border: 0; }
-.pz button::before { content: ''; position: absolute; left: 16px; top: 10px; bottom: 10px; width: 2px; background: var(--ally); opacity: 0; }
-.pz button.sel, .pz button:hover { color: var(--ink); }
-.pz button.sel::before { opacity: 1; }
+/* ── 일시정지: 화면 전체를 흐리고 어둡게, 가운데 패널 ── */
+#pause { position: fixed; inset: 0; z-index: 7; display: flex; align-items: center; justify-content: center;
+  background: rgba(11, 14, 18, 0.55); backdrop-filter: blur(7px) brightness(0.7); -webkit-backdrop-filter: blur(7px) brightness(0.7); animation: fadein 0.15s both; }
+#pause.closing { animation: fadeout 0.15s both; }
+@keyframes fadeout { to { opacity: 0; } }
+.pz { width: min(760px, 92vw); max-height: 90vh; box-sizing: border-box; padding: 36px 40px 40px; overflow: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); animation: pzin 0.15s var(--ease) both; }
+#pause.closing .pz { animation: pzout 0.15s ease-in both; }
+@keyframes pzin { from { transform: scale(0.94); opacity: 0; } }
+@keyframes pzout { to { transform: scale(0.96); opacity: 0; } }
+.pz h1 { margin: 0 0 28px; font: 900 40px var(--display); color: var(--ink); }
+.pz .cols { display: grid; grid-template-columns: 200px 1fr; gap: 40px; align-items: start; }
+.pz nav { display: flex; flex-direction: column; gap: 2px; }
+.pz nav button { padding: 10px 0; text-align: left; font: 500 17px var(--sans); color: var(--dim); cursor: pointer; background: none; border: 0;
+  transform-origin: left center; transition: transform 0.12s var(--ease), color 0.12s; }
+.pz nav button.sel { color: var(--ink); transform: scale(1.08); }
+.pz nav button.sel::before { content: ''; display: inline-block; width: 6px; height: 6px; margin: 0 10px 2px 0; border-radius: 50%; background: var(--ally); }
+.pz section { border-left: 1px solid var(--line); padding-left: 36px; min-width: 0; }
+.pz .stats { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 4px 28px; margin-bottom: 22px; }
+.pz .stats div { display: flex; flex-direction: column-reverse; gap: 4px; }
+.pz .stats b { font: 600 22px var(--sans); color: var(--ink); }
+.pz .stats b.n { font-family: var(--mono); }
+.pz .stats span, .pz h3 { font: 400 13px var(--sans); color: var(--dim); }
+.pz h3 { margin: 0 0 10px; }
+.pz .slots { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+.pz .slot { display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border: 1px solid var(--line); border-radius: var(--r); }
+.pz .slot .ico { width: 26px; height: 26px; flex: none; }
+.pz .slot em { font: 400 13px var(--sans); font-style: normal; color: var(--ink); }
+.pz .slot.evo { border-color: var(--gold); }
+.pz .slot.evo em { color: var(--gold); }
+.pz .pips { display: flex; gap: 3px; }
+.pz .pips b { width: 5px; height: 5px; border-radius: 50%; background: var(--line); }
+.pz .pips b.on { background: var(--ink); }
+.pz .none { margin: 0; font: 400 13px var(--sans); color: var(--dim); }
+.pz .evos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pz .evos li { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font: 400 13px var(--sans); color: var(--dim); }
+.pz .evos li b { font-weight: 600; color: var(--ink); }
+.pz .evos li i { font-style: normal; margin-right: 10px; }
+.pz .evos li i.ok { color: var(--ally); }
+.pz .evos li .n { font-family: var(--mono); }
+.pz .evos li.ready span { color: var(--gold); }
 
 /* ── 면역 도감 ── */
 #codex { position: fixed; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: var(--bg); animation: fadein 0.2s both; }

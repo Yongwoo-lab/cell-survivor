@@ -93,6 +93,7 @@
     "soundOn": "소리 켜기",
     "soundOff": "소리 끄기",
     "toTitle": "타이틀로",
+    "pauseInfo": { "act": "현재 막", "cards": "가진 카드", "noCards": "아직 고른 카드가 없어요", "evo": "진화까지", "evoReady": "조건 완성! 다음 레벨업 카드에 나와요" },
     "magnification": "×1000",
     "scaleBar": "10 µm",
     "hp": "HP",

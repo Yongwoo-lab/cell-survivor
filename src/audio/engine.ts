@@ -1,6 +1,7 @@
 // Web Audio 공용: 컨텍스트, 음소거, 같은 효과음 동시 재생 제한, 합성 도우미
 let ctx: AudioContext | null = null;
 let master: GainNode, sfxBus: GainNode, musicBus: GainNode, noiseBuf: AudioBuffer;
+let pauseLP: BiquadFilterNode, pauseGain: GainNode; // 일시정지 중 브금: 작게 + 저음만
 let muted = false;
 const MAX_SAME = 4;
 const MUSIC_LEVEL = 0.45, SFX_LEVEL = 0.7;
@@ -32,17 +33,23 @@ export function unlock(onStart: () => void) {
   sfxBus.connect(master);
   musicBus = ctx.createGain();
   musicBus.gain.value = MUSIC_LEVEL;
-  musicBus.connect(master);
+  pauseLP = ctx.createBiquadFilter();
+  pauseLP.type = 'lowpass';
+  pauseLP.frequency.value = 20000;
+  pauseGain = ctx.createGain();
+  musicBus.connect(pauseLP).connect(pauseGain).connect(master);
   noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   onStart();
 }
 
-// 일시정지: 컨텍스트를 멈추면 브금 스케줄러도 시간이 멈춘다
+// 일시정지: 브금은 계속 흐르되 볼륨을 낮추고 저음만 남긴다 (0.15초)
 export function setPaused(on: boolean) {
   if (!ctx) return;
-  void (on ? ctx.suspend() : ctx.resume());
+  const t = ctx.currentTime;
+  pauseLP.frequency.setTargetAtTime(on ? 380 : 20000, t, 0.05);
+  pauseGain.gain.setTargetAtTime(on ? 0.45 : 1, t, 0.05);
 }
 
 // 브금 낮추기: level까지 빠르게 내렸다가 hold초 뒤 release초에 걸쳐 복원
