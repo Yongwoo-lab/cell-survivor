@@ -94,6 +94,30 @@
     "sample": "Sample #{n} · {place}",
     "hp": "HP",
     "xp": "XP",
-    "boss": "BOSS"
+    "boss": "BOSS",
+    "adopted": "채택",
+    "materials": "재료",
+    "stats": {
+      "count": ["수", ""],
+      "damage": ["피해", ""],
+      "orbitRadius": ["궤도 반경", ""],
+      "orbitSpeed": ["회전 속도", ""],
+      "cooldown": ["재사용", "초"],
+      "radius": ["반경", ""],
+      "duration": ["지속", "초"],
+      "slow": ["감속", "%"],
+      "dps": ["초당 피해", ""],
+      "projectiles": ["투사체", ""],
+      "markBonus": ["표식 추가 피해", "%"],
+      "markDuration": ["표식 지속", "초"],
+      "burstDamage": ["폭발 피해", ""],
+      "splashRadius": ["폭발 반경", ""],
+      "attackSpeed": ["공격 속도", "%"],
+      "moveSpeed": ["이동 속도", "%"],
+      "bonusPerKill": ["처치당 추가 피해", "%"],
+      "maxBonus": ["최대 추가 피해", "%"],
+      "enemySlow": ["적 감속", "%"],
+      "selfDrainPerSec": ["초당 체력 감소", ""]
+    }
   }
 }

@@ -116,5 +116,14 @@ export function createScene() {
     bloom.threshold = 0.93 - g * 0.7;
   };
 
-  return { scene, camera, composer, setGlow, setAct: bg.setAct };
+  // 레벨업: 초점이 나간 현미경처럼 흐리고 채도가 빠진다 (k = 0 ~ 1)
+  let focusK = -1;
+  const setDefocus = (k: number) => {
+    k = Math.round(k * 40) / 40;
+    if (k === focusK) return;
+    focusK = k;
+    renderer.domElement.style.filter = k > 0 ? `blur(${(k * 7).toFixed(2)}px) saturate(${(1 - k * 0.75).toFixed(2)}) brightness(${(1 - k * 0.25).toFixed(2)})` : '';
+  };
+
+  return { scene, camera, composer, setGlow, setAct: bg.setAct, setDefocus };
 }

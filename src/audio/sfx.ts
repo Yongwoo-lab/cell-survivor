@@ -93,6 +93,12 @@ export const sfx = {
     [1, 1.25, 1.5, 2].forEach((k, i) => tone(o, t, { type: 'square', f0: base * k, dur: 0.12, vol: 0.05, at: i * 0.05 }));
     return 0.32;
   }),
+  // "채택" 도장: 둔탁한 쿵 + 종이 위 마찰
+  stamp: () => voice('stamp', (t, o) => {
+    tone(o, t, { f0: 180, f1: 70, dur: 0.12, vol: 0.4 });
+    noise(o, t, { dur: 0.08, vol: 0.18, filter: 'bandpass', f0: 1800, q: 0.8 });
+    return 0.14;
+  }),
   tick: () => voice('tick', (t, o) => {
     noise(o, t, { dur: 0.03, vol: 0.12, filter: 'bandpass', f0: 3800, q: 6 });
     tone(o, t, { f0: 2200, dur: 0.02, vol: 0.03 });

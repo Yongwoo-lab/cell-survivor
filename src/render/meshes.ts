@@ -47,7 +47,7 @@ function createPlayerMesh() {
 }
 
 // 포도송이: 작은 구 k개를 뭉친 지오메트리
-function clusterGeometry(k: number, r: number) {
+export function clusterGeometry(k: number, r: number) {
   const parts: THREE.BufferGeometry[] = [];
   const sr = r * 0.55;
   for (let i = 0; i < k; i++) {
@@ -71,7 +71,7 @@ function instanced(geo: THREE.BufferGeometry, mat: THREE.Material, cap: number, 
 }
 
 // 그물 무늬: 방사선 + 동심원 (캔버스로 생성)
-function webTexture() {
+export function webTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
   const g = c.getContext('2d')!;

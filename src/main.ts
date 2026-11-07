@@ -10,6 +10,8 @@ import { createView } from './render/meshes';
 import { followCamera, setLift } from './render/camera';
 import { createHud } from './ui/hud';
 import { createCardPicker } from './ui/cards';
+import { createDeck } from './ui/deck';
+import { createCardArt } from './render/cardArt';
 import { createTitle } from './ui/title';
 import { createStory } from './ui/story';
 import { createResult } from './ui/result';
@@ -34,13 +36,22 @@ let demoBot = createBot(BOTS.novice);
 let bossGlow = 0;
 const BOSS_KIND = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 
-const { scene, camera, composer, setGlow, setAct } = createScene();
+const { scene, camera, composer, setGlow, setAct, setDefocus } = createScene();
 const view = createView(scene, camera);
 const updateHud = createHud();
-const updatePicker = createCardPicker((i) => {
-  if (phase !== 'play') return;
-  selectCard(world, i);
-  sfx.card();
+const cardArt = createCardArt();
+const deck = createDeck();
+let artFocus = -1, defocus = 0;
+const updatePicker = createCardPicker({
+  pick(i) {
+    if (phase !== 'play') return;
+    selectCard(world, i);
+    sfx.card();
+  },
+  show: (canvases, ids) => cardArt.show(canvases, ids),
+  hide: () => { cardArt.hide(); artFocus = -1; },
+  focus: (i) => { artFocus = i; },
+  deckTarget: () => deck.target(),
 });
 const title = createTitle();
 const story = createStory();
@@ -219,6 +230,12 @@ function frame(now: number) {
   updateHud(inGame ? world : null);
   updateCombo(inGame ? world : null);
   updatePicker(world);
+  deck.update(inGame ? world : null);
+  cardArt.render(realDt, artFocus);
+  // 레벨업 슬로모션부터 카드 고르는 동안 초점이 나간다
+  const wantDefocus = world.choosing ? 1 : world.slowmo > 0 ? 1 - world.slowmo / balance.levelUp.slowmoTime : 0;
+  defocus += (wantDefocus - defocus) * Math.min(1, realDt * 10);
+  setDefocus(defocus < 0.01 ? 0 : defocus);
   if ((phase === 'play' && !paused) || phase === 'demo') story.update(world, phase === 'play');
   pause.btn.hidden = !(phase === 'play' && !world.choosing && !world.over);
   tickFps(realDt);
