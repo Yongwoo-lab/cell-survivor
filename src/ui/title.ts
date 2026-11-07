@@ -57,6 +57,11 @@ export function createTitle(h: TitleHooks) {
     setTimeout(() => logoEl.classList.remove('beat'), 110);
   });
 
+  // 선택만 바뀔 때는 클래스만 바꾼다 (다시 만들면 등장 애니메이션이 다시 돌아 깜빡인다)
+  const setSel = (i: number) => {
+    sel = i;
+    nav.querySelectorAll('button').forEach((b, j) => b.classList.toggle('sel', j === i));
+  };
   const renderMenu = () => {
     const s = h.settings();
     const rows = inSettings
@@ -77,8 +82,11 @@ export function createTitle(h: TitleHooks) {
     if (inSettings) {
       if (sel === 0) h.toggle('muted');
       else if (sel === 1) h.toggle('cb');
-      else { inSettings = false; sel = 3; }
-      renderMenu();
+      else { inSettings = false; sel = 3; renderMenu(); return; }
+      // 켬/끔 글자만 바꾼다
+      const s = h.settings(), em = nav.querySelectorAll('em');
+      em[0].textContent = s.muted ? U.settings.off : U.settings.on;
+      em[1].textContent = s.cb ? U.settings.on : U.settings.off;
       return;
     }
     const item = ITEMS[sel];
@@ -89,11 +97,11 @@ export function createTitle(h: TitleHooks) {
   };
   nav.addEventListener('mouseover', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('button');
-    if (b && Number(b.dataset.i) !== sel) { sel = Number(b.dataset.i); renderMenu(); }
+    if (b && Number(b.dataset.i) !== sel) setSel(Number(b.dataset.i));
   });
   nav.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('button');
-    if (b) { sel = Number(b.dataset.i); activate(); }
+    if (b) { setSel(Number(b.dataset.i)); activate(); }
   });
 
   return {
@@ -113,9 +121,8 @@ export function createTitle(h: TitleHooks) {
     key(e: KeyboardEvent): boolean {
       const n = inSettings ? 3 : ITEMS.length;
       if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
-        sel = (sel + (e.code === 'ArrowDown' ? 1 : n - 1)) % n;
+        setSel((sel + (e.code === 'ArrowDown' ? 1 : n - 1)) % n);
         sfx.tick();
-        renderMenu();
       } else if (e.code === 'Enter') activate();
       else if (e.code === 'Space' && !inSettings) { if (!leaving) h.start(); }
       else if (e.code === 'Escape' && inSettings) { inSettings = false; sel = 3; renderMenu(); }
