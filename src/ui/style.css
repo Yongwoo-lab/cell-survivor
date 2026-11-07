@@ -269,7 +269,7 @@ button { font: inherit; color: inherit; }
 .rk li span, #title aside li span { color: var(--dim); text-align: left; }
 .rk li b, #title aside li b { text-align: left; letter-spacing: 0.18em; }
 .rk li em, #title aside li em { font-style: normal; color: var(--ink); font-variant-numeric: tabular-nums; }
-.rk li.me { background: rgba(82, 240, 138, 0.1); box-shadow: inset 3px 0 0 var(--gfp); }
+.rk li.me { background: rgba(82, 240, 138, 0.12); }
 .rk li.entry b i { font-style: normal; display: inline-block; width: 1.1em; margin-right: 3px; border-bottom: 2px solid var(--gfp); text-align: center; }
 .rk li.empty { display: block; color: var(--dim); }
 .rk .back { margin-top: 14px; }
