@@ -23,7 +23,8 @@ const INSTRUMENT = () => {
   const add = EventTarget.prototype.addEventListener, rem = EventTarget.prototype.removeEventListener;
   const keyOf = (t, o) => `${t}|${typeof o === 'object' ? !!o?.capture : !!o}`;
   EventTarget.prototype.addEventListener = function (t, f, o) {
-    if (f && !(typeof o === 'object' && o?.once)) {
+    // 오디오 노드는 재생이 끝나면 함께 사라지므로 세지 않는다
+    if (f && !(typeof o === 'object' && o?.once) && !(this instanceof AudioNode)) {
       let m = reg.get(this);
       if (!m) reg.set(this, (m = new Map()));
       const k = keyOf(t, o);
