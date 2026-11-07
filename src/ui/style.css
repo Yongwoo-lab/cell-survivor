@@ -113,32 +113,32 @@ button { font: inherit; color: inherit; }
 @keyframes deal { 0% { transform: translateY(90px) rotateY(180deg); opacity: 0; } 40% { transform: translateY(0) rotateY(180deg); opacity: 1; } 100% { transform: rotateY(0); } }
 .card.focus { translate: 0 -16px; }
 .card.dim { filter: brightness(0.45) saturate(0.6); }
-.face, .back { position: absolute; inset: 0; border-radius: 3px; backface-visibility: hidden; box-sizing: border-box; overflow: hidden; }
-.face { display: flex; flex-direction: column; text-align: left; background: #f1ecdf; color: var(--paper-ink); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+.card .face, .card .back { position: absolute; inset: 0; border-radius: 3px; backface-visibility: hidden; box-sizing: border-box; overflow: hidden; }
+.card .face { display: flex; flex-direction: column; text-align: left; background: #f1ecdf; color: var(--paper-ink); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
 .card.focus .face { box-shadow: 0 0 0 2px var(--fc), 0 18px 40px rgba(0, 0, 0, 0.7); }
-.band { display: flex; align-items: center; gap: 7px; padding: 7px 10px; font: 600 11px var(--mono); letter-spacing: 0.04em; border-bottom: 1px solid #cfc7b2; }
-.band .swatch { width: 12px; height: 12px; border-radius: 2px; background: var(--fc); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
-.band .no { margin-left: auto; color: #6d6656; }
-.art { display: block; width: 100%; height: 150px; background: #05060a; }
-.title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 10px 12px 0; }
+.card .band { display: flex; align-items: center; gap: 7px; padding: 7px 10px; font: 600 11px var(--mono); letter-spacing: 0.04em; border-bottom: 1px solid #cfc7b2; }
+.card .band .swatch { width: 12px; height: 12px; border-radius: 2px; background: var(--fc); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
+.card .band .no { margin-left: auto; color: #6d6656; }
+.card .art { display: block; width: 100%; height: 150px; background: #05060a; }
+.card .title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 10px 12px 0; }
 .card h3 { margin: 0; font: 400 23px/1.15 var(--display); color: #14120d; }
-.dots { display: flex; gap: 3px; flex: none; }
-.dots i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #3a362c; box-sizing: border-box; }
-.dots i.on { background: #3a362c; }
-.dots i.next { background: var(--fc); border-color: #14120d; }
-.dots .new { padding: 0 5px; font: 600 10px/16px var(--mono); color: #fff; background: #14120d; border-radius: 2px; }
-.effect { margin: 6px 12px 0; font-size: 13px; line-height: 1.45; color: #2b2820; }
-.delta { margin: 8px 12px 0; display: flex; flex-direction: column; gap: 1px; font: 12px/1.45 var(--mono); color: #14120d; }
-.delta b { font-weight: 600; }
-.sci { margin: auto 0 0; display: flex; gap: 6px; align-items: flex-start; padding: 8px 12px 10px; font-size: 11px; line-height: 1.4; color: #5d5747; border-top: 1px dashed #cfc7b2; }
-.sci svg { width: 13px; height: 13px; flex: none; margin-top: 1px; }
-.sci span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .dots { display: flex; gap: 3px; flex: none; }
+.card .dots i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #3a362c; box-sizing: border-box; }
+.card .dots i.on { background: #3a362c; }
+.card .dots i.next { background: var(--fc); border-color: #14120d; }
+.card .dots .new { padding: 0 5px; font: 600 10px/16px var(--mono); color: #fff; background: #14120d; border-radius: 2px; }
+.card .effect { margin: 6px 12px 0; font-size: 13px; line-height: 1.45; color: #2b2820; }
+.card .delta { margin: 8px 12px 0; display: flex; flex-direction: column; gap: 1px; font: 12px/1.45 var(--mono); color: #14120d; }
+.card .delta b { font-weight: 600; }
+.card .sci { margin: auto 0 0; display: flex; gap: 6px; align-items: flex-start; padding: 8px 12px 10px; font-size: 11px; line-height: 1.4; color: #5d5747; border-top: 1px dashed #cfc7b2; }
+.card .sci svg { width: 13px; height: 13px; flex: none; margin-top: 1px; }
+.card .sci span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card kbd { position: absolute; top: 40px; right: 8px; padding: 0 6px; font: 600 12px/18px var(--mono); color: #fff; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; }
-.back { transform: rotateY(180deg); display: grid; place-content: center; border: 1px solid rgba(200, 225, 230, 0.35);
+.card .back { transform: rotateY(180deg); display: grid; place-content: center; border: 1px solid rgba(200, 225, 230, 0.35);
   background: linear-gradient(90deg, #dcd5c2 0 22%, transparent 22%), rgba(150, 190, 200, 0.12); }
-.back span { margin-left: 22%; font: 600 12px var(--mono); color: rgba(220, 235, 240, 0.6); }
+.card .back span { margin-left: 22%; font: 600 12px var(--mono); color: rgba(220, 235, 240, 0.6); }
 /* 채택 도장 → 보유 카드 줄로 날아감 */
-.stamp { position: absolute; top: 46%; left: 50%; padding: 4px 14px; font: 400 30px var(--display); color: #c0182c; border: 3px solid #c0182c; border-radius: 4px;
+.card .stamp { position: absolute; top: 46%; left: 50%; padding: 4px 14px; font: 400 30px var(--display); color: #c0182c; border: 3px solid #c0182c; border-radius: 4px;
   transform: translate(-50%, -50%) rotate(-12deg) scale(1.8); opacity: 0; pointer-events: none; mix-blend-mode: multiply; }
 .card.stamped .stamp { animation: stamp 0.25s cubic-bezier(.3, 1.4, .5, 1) forwards; }
 @keyframes stamp { to { transform: translate(-50%, -50%) rotate(-12deg) scale(1); opacity: 0.9; } }
@@ -227,7 +227,7 @@ button { font: inherit; color: inherit; }
 
 /* ── 결과 카드 (세로 9:16, 실험 기록지) ── */
 #result { position: fixed; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(5, 6, 10, 0.88); animation: fadein 0.4s both; }
-.rc { box-sizing: border-box; height: min(calc(100vh - 60px), 860px); aspect-ratio: 9 / 16; padding: 6% 7%; display: flex; flex-direction: column; gap: 1.3vh;
+.rc { box-sizing: border-box; height: min(calc(100vh - 60px), 860px); aspect-ratio: 9 / 16; padding: 2.6em 2.3em; display: flex; flex-direction: column; gap: 1.3vh;
   overflow: hidden; background: var(--panel); border: 1px solid var(--line-2); border-top: 4px solid var(--gfp); font-size: min(1.55vh, 15px); animation: slideup 0.4s var(--ease) both; }
 #result.lost .rc { border-top-color: var(--rho); }
 .rc-top { font: 600 0.85em var(--mono); letter-spacing: 0.16em; color: var(--dim); text-transform: uppercase; }
