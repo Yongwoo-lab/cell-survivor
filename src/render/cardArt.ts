@@ -3,6 +3,22 @@
 import * as THREE from 'three';
 import { glassy } from './materials';
 import { webTexture, clusterGeometry } from './meshes';
+import { createHero, HERO_OPEN, HERO_HAPPY } from './hero';
+
+let artCamera: THREE.Camera;
+// 주인공 호중구 (게임과 같은 모델). 눈은 카메라를 보고 가끔 깜빡인다.
+function heroArt(r: number, happy = false) {
+  const h = createHero(r, 14);
+  const seed = Math.random() * 10;
+  const tick = (t: number) => {
+    h.granules.update(t);
+    h.inner.rotation.y = t * 0.3;
+    const blink = (t + seed) % 3.2 < 0.15 ? Math.sin((((t + seed) % 3.2) / 0.15) * Math.PI) : 0;
+    h.eyes.set(0, -0.1, blink, happy ? HERO_HAPPY : HERO_OPEN);
+    h.eyes.place(artCamera, h.group, r);
+  };
+  return { group: h.group, tick };
+}
 
 const W = 320, H = 200;
 const GFP = 0x7bd88f, DAPI = 0x6e9bff, RHO = 0xff5a4e, GOLD = 0xe2b857, YEL = 0xe2b857, HEAT = 0xff5a4e;
@@ -53,7 +69,11 @@ const BUILD: Record<string, () => Art> = {
       new THREE.MeshBasicMaterial({ map: webTexture(), color: new THREE.Color(0x7bd88f).multiplyScalar(0.8), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
     disc.rotation.x = -1.1;
     g.add(disc);
-    [[-0.4, 0.3], [0.5, -0.2], [0.1, 0.6], [-0.2, -0.5]].forEach(([x, z]) => { const c = coccus(0.8); c.position.set(x, 0.1 + z * 0.4, z * 0.45); g.add(c); });
+    [[-0.7, 0.3], [0.75, -0.2], [0.35, 0.7], [-0.45, -0.6]].forEach(([x, z]) => { const c = coccus(0.8); c.position.set(x, 0.1 + z * 0.4, z * 0.45); g.add(c); });
+    const h = heroArt(0.5);
+    h.group.position.set(0, 0.35, 0);
+    g.add(h.group);
+    g.tick = h.tick;
     return g;
   },
   // 항체가 붙어 표식 고리가 생긴 세균
@@ -86,11 +106,12 @@ const BUILD: Record<string, () => Art> = {
   // 사이토카인: 두 세포 사이를 오가는 신호 입자
   cytokine() {
     const g: Art = new THREE.Group();
-    const a = cell(GFP, 0.55), b = cell(GFP, 0.55);
+    const ha = heroArt(0.5), hb = heroArt(0.5, true), a = ha.group, b = hb.group;
     a.position.x = -0.95; b.position.x = 0.95;
     g.add(a, b);
     const dots = Array.from({ length: 10 }, () => { const d = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), basic(YEL)); g.add(d); return d; });
     g.tick = (t) => dots.forEach((d, k) => {
+      if (k === 0) { ha.tick(t); hb.tick(t); }
       const p = (t * 0.5 + k / dots.length) % 1, dir = k % 2 ? 1 : -1;
       d.position.set(dir * (-0.6 + p * 1.2), Math.sin(p * Math.PI) * 0.45 * (k % 3 ? 1 : -1), Math.cos(k) * 0.2);
     });
@@ -119,9 +140,11 @@ const BUILD: Record<string, () => Art> = {
   // 발열: 세포 주위로 피어오르는 열기
   fever() {
     const g: Art = new THREE.Group();
-    g.add(cell(HEAT, 0.65));
+    const h = heroArt(0.65);
+    g.add(h.group);
     const heat = Array.from({ length: 16 }, () => { const d = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), basic(HEAT, 1)); g.add(d); return d; });
     g.tick = (t) => heat.forEach((d, k) => {
+      if (k === 0) h.tick(t);
       const p = (t * 0.45 + k / heat.length) % 1;
       d.position.set(Math.cos(k * 2.3) * (0.75 + p * 0.2), -0.6 + p * 1.6, Math.sin(k * 2.3) * (0.75 + p * 0.2));
       d.scale.setScalar(1 - p);
@@ -151,7 +174,7 @@ export function createCardArt() {
   const sun = new THREE.DirectionalLight(0xffffff, 0.9);
   sun.position.set(3, 5, 4);
   scene.add(sun);
-  const camera = new THREE.PerspectiveCamera(32, W / H, 0.1, 50);
+  const camera = artCamera = new THREE.PerspectiveCamera(32, W / H, 0.1, 50);
   camera.position.set(0, 1.3, 5);
   camera.lookAt(0, 0, 0);
   const cache = new Map<string, Art>();

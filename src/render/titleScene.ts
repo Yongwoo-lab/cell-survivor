@@ -1,11 +1,11 @@
 // 타이틀 3D 장면: 화면 오른쪽을 채우는 백혈구 클로즈업. 막은 숨 쉬듯 꿀렁이고 핵은 심장 박동에 맞춰 뛴다.
 // 멀리서 구균이 다가왔다 사라지고, 8~12초마다 어둠 속에서 보스의 빨간 눈이 번쩍인다.
 import * as THREE from 'three';
-import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { glassy, time } from './materials';
+import { createHero, HERO_OPEN } from './hero';
 import { clusterGeometry } from './meshes';
 
-const GFP = 0x7bd88f, DAPI = 0x6e9bff, RED = 0xff5a4e;
+const RED = 0xff5a4e;
 const CAM = new THREE.Vector3(0, 0.3, 10);
 
 export function createTitleScene() {
@@ -17,31 +17,13 @@ export function createTitleScene() {
   scene.add(key);
   const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 120);
 
-  // 거대한 백혈구 (오른쪽)
-  const cell = new THREE.Group();
+  // 거대한 백혈구 (오른쪽): 게임 속 주인공과 같은 호중구 모델
+  const hero = createHero(3.3, 70);
+  const cell = hero.group, membrane = hero.body, nucleus = hero.nucleus;
   cell.position.set(3.4, -0.2, 0);
-  const membrane = new THREE.Mesh(new THREE.SphereGeometry(3.3, 96, 72),
-    glassy({ color: 0x06200f, opacity: 0.1, rim: GFP, rimStrength: 1.0, rimPower: 2.4, wobble: 0.16 }));
-  membrane.renderOrder = 1;
-  const ng = mergeVertices(new THREE.IcosahedronGeometry(1.35, 5));
-  const pos = ng.attributes.position, v = new THREE.Vector3();
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i);
-    const k = 1 + 0.1 * Math.sin(v.x * 3) * Math.sin(v.y * 2.4 + 1) * Math.sin(v.z * 2.8 + 2);
-    pos.setXYZ(i, v.x * k * 1.1, v.y * k * 0.9, v.z * k);
-  }
-  ng.computeVertexNormals();
-  const nucleus = new THREE.Mesh(ng, glassy({ color: 0x18266e, opacity: 0.95, rim: 0x9db6ff, rimStrength: 0.7, rimPower: 1.8, emissive: DAPI, emissiveIntensity: 0.55, depthWrite: true }));
-  nucleus.position.set(-0.3, 0.1, 0.2);
-  // 세포질 과립
-  const granMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(GFP).multiplyScalar(0.55) });
-  for (let i = 0; i < 40; i++) {
-    const g = new THREE.Mesh(new THREE.SphereGeometry(0.03 + Math.random() * 0.04, 8, 6), granMat);
-    g.position.setFromSphericalCoords(1.7 + Math.random() * 1.3, Math.acos(2 * Math.random() - 1), Math.random() * Math.PI * 2);
-    cell.add(g);
-  }
-  cell.add(nucleus, membrane);
   scene.add(cell);
+  let blinkIn = 2.5, blinkT = 0, lookT = 0;
+  const look = new THREE.Vector2(-0.7, 0.1), lookTo = new THREE.Vector2(-0.7, 0.1);
 
   // 멀리서 다가왔다 사라지는 구균 (피사계 심도로 흐릿)
   const cocMat = glassy({ color: 0xffffff, opacity: 0.7, rim: RED, rimStrength: 0.7, emissive: RED, emissiveIntensity: 0.45, depthWrite: true });
@@ -89,7 +71,18 @@ export function createTitleScene() {
       membrane.scale.setScalar(breath);
       beat = Math.max(0, beat - dt * 5);
       nucleus.scale.setScalar(1 + beat * 0.08);
-      cell.rotation.y = t * 0.05;
+      hero.inner.rotation.y = t * 0.05;
+      hero.granules.update(t);
+      // 눈: 대부분 왼쪽(로고·메뉴)을 보다가 가끔 두리번, 2~5초마다 깜빡
+      if ((lookT -= dt) <= 0) {
+        lookT = 1.5 + Math.random() * 2.5;
+        if (Math.random() < 0.6) lookTo.set(-0.75, 0.05 + Math.random() * 0.2); else lookTo.set(Math.random() * 1.4 - 0.7, Math.random() * 0.8 - 0.4);
+      }
+      look.lerp(lookTo, Math.min(1, dt * 6));
+      if ((blinkIn -= dt) <= 0) { blinkT = 0.16; blinkIn = 2 + Math.random() * 3; }
+      blinkT -= dt;
+      hero.eyes.set(look.x, look.y, blinkT > 0 ? Math.sin((1 - blinkT / 0.16) * Math.PI) : 0, HERO_OPEN);
+      hero.eyes.place(camera, cell, 3.3 * breath, look.x * 0.5, look.y * 0.5);
       cocci.forEach((c) => {
         c.t = (c.t + dt / 14) % 1;
         const z = -32 + c.t * 26;
@@ -98,7 +91,7 @@ export function createTitleScene() {
         c.m.scale.setScalar(c.t < 0.1 ? c.t / 0.1 : c.t > 0.85 ? (1 - c.t) / 0.15 : 1);
       });
       // 8~12초마다 0.5초 번쩍 (깜빡임 두 번)
-      if ((nextGlare -= dt) <= 0) { nextGlare = 8 + Math.random() * 4; glare = 0; onGlare(); }
+      if ((nextGlare -= dt) <= 0) { nextGlare = 8 + Math.random() * 4; glare = 0; onGlare(); lookTo.set(-0.9, 0.5); lookT = 1.2; } // 번쩍이는 쪽을 흘끗
       if (glare >= 0) {
         glare += dt;
         eyeMat.opacity = glare > 0.5 ? 0 : glare < 0.08 || (glare > 0.18 && glare < 0.5) ? 1 : 0.2;

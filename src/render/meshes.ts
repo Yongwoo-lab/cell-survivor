@@ -6,7 +6,8 @@ import dialogue from '../data/dialogue.json';
 import { ENEMIES, MAX_ENEMIES, type World } from '../game/world';
 import { glassy, time } from './materials';
 import { createParticles, createShockwaves, createPopups, createRain, createCorpses } from './effects';
-import { createEyes } from './eyes';
+import { createEyes, LOOK_GRUMPY, LOOK_GLOW, LOOK_ROUND } from './eyes';
+import { createHero, softShadow, HERO_OPEN, HERO_SQUINT, HERO_HAPPY } from './hero';
 import { createNumbers } from './numbers';
 import { shake } from './camera';
 
@@ -15,37 +16,13 @@ const T = balance.cardTuning, CELL = balance.cells;
 const BOSS = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 const BACILLUS = ENEMIES.findIndex((e) => e.id === 'bacillus');
 // 눈이 달린 적과 눈 크기(반지름 대비)
+const EYE_STYLE = Object.fromEntries(ENEMIES.map((e, i) => [i,
+  e.id === 'superbug' ? LOOK_GLOW : e.id === 'virus' ? LOOK_ROUND : LOOK_GRUMPY])) as Record<number, number>;
 const EYE_SIZE = Object.fromEntries(
   (['coccus', 'bacillus', 'virus', 'resistantCoccus', 'superbug'] as const).map((id) => [ENEMIES.findIndex((e) => e.id === id), id === 'superbug' ? 0.28 : 0.42]),
 ) as Record<number, number>;
 
 // 게임 (x, y) → 화면 (x, z)
-function createPlayerMesh() {
-  const group = new THREE.Group();
-
-  // 살짝 울퉁불퉁한 핵: 안쪽에서 은은하게 빛남
-  const ng = mergeVertices(new THREE.IcosahedronGeometry(0.45, 4));
-  const pos = ng.attributes.position;
-  const v = new THREE.Vector3();
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i);
-    const k = 1 + 0.12 * Math.sin(v.x * 9) * Math.sin(v.y * 7 + 1) * Math.sin(v.z * 8 + 2);
-    pos.setXYZ(i, v.x * k, v.y * k * 0.85, v.z * k);
-  }
-  ng.computeVertexNormals();
-  const nucleus = new THREE.Mesh(ng, glassy({
-    color: 0x18266e, opacity: 0.92, rim: 0x8fa8ff, rimStrength: 0.9, rimPower: 1.8,
-    emissive: 0x6e9bff, emissiveIntensity: 0.85, depthWrite: true,
-  }));
-
-  const membrane = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), glassy({
-    color: 0x06200f, opacity: 0.1, rim: 0x7bd88f, rimStrength: 1.15, rimPower: 2.6, wobble: 0.06,
-  }));
-  membrane.renderOrder = 1;
-  group.add(nucleus, membrane);
-  return group;
-}
-
 // 포도송이: 작은 구 k개를 뭉친 지오메트리
 export function clusterGeometry(k: number, r: number) {
   const parts: THREE.BufferGeometry[] = [];
@@ -98,8 +75,13 @@ export function webTexture() {
   return new THREE.CanvasTexture(c);
 }
 
-// 막대균: 이동 방향(x축)으로 긴 캡슐
-export const bacillusGeometry = (r: number) => new THREE.CapsuleGeometry(r * 0.5, r * 2.2, 6, 12).rotateZ(Math.PI / 2);
+// 막대균: 이동 방향(x축)으로 긴 캡슐 + 뒤로 뻗은 편모 (재질의 FLAGELLA가 꿈틀거리게 한다)
+export const BACILLUS_HALF = 1.6; // 몸 반 길이 (반지름 배수)
+export function bacillusGeometry(r: number) {
+  const body = new THREE.CapsuleGeometry(r * 0.5, r * 2.2, 6, 12).rotateZ(Math.PI / 2);
+  const tail = new THREE.CylinderGeometry(r * 0.05, r * 0.1, r * 2.6, 5, 20).rotateZ(Math.PI / 2).translate(-r * (BACILLUS_HALF + 1.2), 0, 0);
+  return mergeGeometries([body, tail]);
+}
 
 // 정이십면체 꼭짓점 방향 (중복 제거)
 function icoDirs(detail: number) {
@@ -146,8 +128,15 @@ const LOOKS = 256; // 개체별 회전·크기는 id로 이 표에서 고른다 
 type Ripple = (x: number, y: number, z: number, strength: number, life?: number) => void;
 
 export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Ripple = () => {}) {
-  const player = createPlayerMesh();
-  scene.add(player);
+  const hero = createHero(1);
+  const player = hero.group;
+  const shadow = softShadow(1.3);
+  // 위족: 공격할 때 표적 쪽으로 막이 뻗었다 들어간다
+  const pod = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), hero.membraneMat);
+  pod.renderOrder = 1;
+  pod.scale.setScalar(0);
+  player.add(pod);
+  scene.add(player, shadow);
 
   // 적: 재질은 흰색, 실제 색은 인스턴스 색 (번쩍임 = 밝은 흰색으로 교체)
   const kindColors = ENEMIES.map((d) => new THREE.Color(d.color));
@@ -160,8 +149,18 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
   const infectedMat = glassy({
     color: 0xffffff, opacity: 0.45, rim: 0xffffff, rimStrength: 0.8, emissive: 0xffffff, emissiveIntensity: 0.3, wobble: 0.05, depthWrite: true, tint: true,
   });
+  const bossR = ENEMIES[BOSS].radius, bacR = ENEMIES[BACILLUS].radius, virR = ENEMIES.find((e) => e.id === 'virus')!.radius;
   const bossMat = glassy({
     color: 0xffffff, opacity: 0.8, rim: 0xffffff, rimStrength: 0.9, emissive: 0xffffff, emissiveIntensity: 0.38, wobble: 0.1, depthWrite: true, tint: true,
+    pulse: { from: bossR * 0.9, amp: 0.35, speed: 2.2 }, // 가시가 숨 쉬듯
+  });
+  const bacillusMat = glassy({
+    color: 0xffffff, opacity: 0.6, rim: 0xffffff, rimStrength: 0.75, emissive: 0xffffff, emissiveIntensity: 0.42, depthWrite: true, tint: true,
+    flagella: { from: bacR * BACILLUS_HALF, amp: bacR * 0.35, wave: 4.5 / bacR },
+  });
+  const virusMat = glassy({
+    color: 0xffffff, opacity: 0.6, rim: 0xffffff, rimStrength: 0.75, emissive: 0xffffff, emissiveIntensity: 0.5, depthWrite: true, tint: true,
+    pulse: { from: virR * 0.75, amp: 0.45, speed: 7 },
   });
   // 종류마다 InstancedMesh 묶음 (구균은 포도송이 모양 4가지)
   const kindMeshes = ENEMIES.map((d) => {
@@ -171,7 +170,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
       : d.id === 'virus' ? [virusGeometry(d.radius)]
       : d.id === 'superbug' ? [bossGeometry(d.radius)]
       : [new THREE.SphereGeometry(d.radius, 32, 20)];
-    const mat = d.id === 'superbug' ? bossMat : d.id === 'infected' ? infectedMat : enemyMat;
+    const mat = d.id === 'superbug' ? bossMat : d.id === 'infected' ? infectedMat : d.id === 'bacillus' ? bacillusMat : d.id === 'virus' ? virusMat : enemyMat;
     return geos.map((g) => instanced(g, mat, d.id === 'superbug' ? 4 : MAX_ENEMIES, kindColors[0]));
   });
   scene.add(...kindMeshes.flat());
@@ -266,6 +265,49 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
   const rz = new THREE.Quaternion(), Z = new THREE.Vector3(0, 0, 1), browP = new THREE.Vector3(), eyeC = new THREE.Vector3();
   // 백혈구 눈: 이동 방향을 보고 가끔 깜빡임 (화면 연출 상태)
   let lastX = 0, lastY = 0, lookX = 0, lookY = 0, blinkIn = 3, blinkT = 0;
+  // 몸: 스쿼시·스트레치 스프링, 이동 방향, 피격·레벨업·위족 타이머
+  let st = 0, sv = 0, moveAng = 0, hurtT = 0, squintT = 0, happyT = 0, podT = 1, podAng = 0, prevSlow = 0;
+  const POD_TIME = 0.2, BLINK = 0.15;
+  function animateHero(w: World, dt: number, t: number, vx: number, vy: number) {
+    const speed = Math.hypot(vx, vy);
+    if (dt > 0) {
+      const target = 0.14 * Math.min(1, speed / balance.player.speed);
+      if (speed > 0.5) moveAng = -Math.atan2(vy, vx);
+      sv += ((target - st) * 220 - sv * 11) * dt; // 멈추면 출렁이며 돌아온다
+      st += sv * dt;
+    }
+    if (w.fx.hurt) { sv -= 3.2; hurtT = 0.12; squintT = 0.35; }
+    if ((w.slowmo > 0 && prevSlow <= 0) || w.choosing) happyT = 1.2;
+    prevSlow = w.slowmo;
+    hurtT -= dt; squintT -= dt; happyT -= dt;
+    // 숨: 가만히 있을수록 크게
+    const breath = 1 + Math.sin(t * 2.4) * 0.03 * (1 - Math.min(1, speed / 2));
+    hero.body.rotation.y = moveAng;
+    hero.inner.rotation.y = -moveAng;
+    hero.body.scale.set(breath * (1 + st), breath * (1 - st * 0.35), breath * (1 - st * 0.55));
+    hero.granules.update(t);
+    hero.membraneMat.emissive.setScalar(Math.max(0, hurtT / 0.12) * 1.4); // 피격: 흰 번쩍
+    // 위족
+    if (w.fx.shot && w.shots.count) {
+      const k = w.shots.count - 1, sh = w.shots.f;
+      podAng = -Math.atan2(sh.vy[k], sh.vx[k]);
+      podT = 0;
+    }
+    podT += dt;
+    const pk = podT < POD_TIME ? Math.sin((podT / POD_TIME) * Math.PI) : 0;
+    pod.rotation.y = podAng;
+    pod.position.set(Math.cos(podAng) * (0.72 + pk * 0.4), -0.05, -Math.sin(podAng) * (0.72 + pk * 0.4));
+    if (pk > 0) pod.scale.set(0.2 + pk * 0.45, 0.24, 0.24); else pod.scale.setScalar(0);
+    // 눈: 깜빡임, 찡그림, 웃음
+    if ((blinkIn -= dt) <= 0) { blinkT = BLINK; blinkIn = 2 + Math.random() * 3; }
+    blinkT -= dt;
+    const lid = blinkT > 0 ? Math.sin((1 - blinkT / BLINK) * Math.PI) : 0;
+    hero.eyes.set(lookX, lookY, lid, squintT > 0 ? HERO_SQUINT : happyT > 0 ? HERO_HAPPY : HERO_OPEN);
+    hero.eyes.place(camera, player, 1 + st * 0.3, lookX, lookY);
+    shadow.position.set(w.player.x, 0.03, w.player.y);
+    shadow.scale.set(breath * (1 + st * 0.6), 1, breath * (1 - st * 0.3));
+  }
+
   // 화면 흔들림을 걸 사건들
   let seenWorld: World | null = null, prevBoss = false, prevEvolve = 0, prevPhase2 = false;
 
@@ -337,9 +379,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
         lookX += (vx / l - lookX) * Math.min(1, dt * 10);
         lookY += (-vy / l - lookY) * Math.min(1, dt * 10);
       }
-      if ((blinkIn -= dt) <= 0) { blinkT = 0.13; blinkIn = 2 + Math.random() * 3; }
-      blinkT -= dt;
-      if (player.visible) eyes.pair(player.position, 1, 0.3, lookX, lookY, false, blinkT > 0);
+      animateHero(w, dt, t, vx, vy);
       for (let i = 0; i < w.enemies.count; i++) {
         const id = e.id[i], kind = e.kind[i], def = ENEMIES[kind];
         const ms = kindMeshes[kind], v = id % ms.length, j = counts[kind][v]++;
@@ -359,7 +399,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
           // 적은 플레이어를 쳐다본다 (화면 위쪽 = 게임 -y)
           const r = def.radius * (kind === BOSS ? 1 : look.scale);
           const dx = w.player.x - e.x[i], dy = w.player.y - e.y[i], l = Math.hypot(dx, dy) || 1;
-          eyes.pair(eyeC.copy(p), r, r * eye * 2, dx / l, -dy / l, e.squint[i] > 0);
+          eyes.pair(eyeC.copy(p), r, r * eye * 2, dx / l, -dy / l, e.squint[i] > 0, false, EYE_STYLE[kind]);
           if (kind === BOSS) bossAt = i;
         }
         if (e.mark[i] > 0) {

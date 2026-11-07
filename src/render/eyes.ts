@@ -1,7 +1,9 @@
 // 눈: 카메라를 향한 작은 판 하나를 셰이더로 그린다 (뜬 눈 / > < 찡그림 / 감은 눈)
 import * as THREE from 'three';
 
-export const EYE_OPEN = 0, EYE_SQUINT_L = 1, EYE_SQUINT_R = 2, EYE_CLOSED = 3;
+export const EYE_OPEN = 0, EYE_SQUINT_L = 1, EYE_SQUINT_R = 2, EYE_CLOSED = 3, EYE_GRUMPY_L = 4, EYE_GRUMPY_R = 5, EYE_GLOW = 6;
+// 눈 모양: 둥근 눈 / 심술 난 눈(안쪽이 내려간 눈꺼풀) / 빛나는 눈(보스)
+export const LOOK_ROUND = 0, LOOK_GRUMPY = 1, LOOK_GLOW = 2;
 
 const vertexShader = `
 attribute vec2 aLook; attribute float aMode;
@@ -16,13 +18,24 @@ float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp
 void main() {
   vec2 p = vUv * 2.0 - 1.0;
   vec3 ink = vec3(0.05, 0.04, 0.08), white = vec3(0.8);
-  if (vMode < 0.5) {
+  if (vMode < 0.5 || vMode > 3.5) {
     float d = length(p);
     if (d > 1.0) discard;
-    vec3 col = d > 0.8 ? ink : white;
+    bool glow = vMode > 5.5;
+    vec3 col = d > 0.8 ? ink : glow ? vec3(2.6, 0.55, 0.3) : white;
     vec2 c = vLook * 0.36;
-    if (length(p - c) < 0.46) col = ink;
-    if (length(p - c - vec2(-0.16, 0.18)) < 0.12) col = white; // 눈동자 반짝임
+    if (glow) { if (abs(p.x - c.x * 0.6) < 0.15 && abs(p.y) < 0.62) col = ink; } // 세로로 찢어진 동공
+    else {
+      if (length(p - c) < 0.46) col = ink;
+      if (length(p - c - vec2(-0.16, 0.18)) < 0.12) col = white; // 눈동자 반짝임
+    }
+    if (vMode > 3.5 && vMode < 5.5) {
+      // 심술 난 눈꺼풀: 코 쪽이 내려간 사선
+      float inner = vMode < 4.5 ? p.x : -p.x;
+      float lid = 0.3 - 0.55 * inner;
+      if (p.y > lid + 0.18) discard;
+      if (p.y > lid) col = ink;
+    }
     gl_FragColor = vec4(col, 1.0);
   } else if (vMode < 2.5) {
     vec2 q = vec2(vMode < 1.5 ? p.x : -p.x, p.y);
@@ -59,14 +72,15 @@ export function createEyes(scene: THREE.Scene, camera: THREE.Camera, max: number
       toward.set(0, 0, 1).applyQuaternion(camera.quaternion);
     },
     // 몸 중심 c, 반지름 r에 눈 두 개. (lx, ly): 화면에서 바라보는 방향, squint: 찡그림, closed: 감음
-    pair(c: THREE.Vector3, r: number, size: number, lx: number, ly: number, squint: boolean, closed = false) {
+    pair(c: THREE.Vector3, r: number, size: number, lx: number, ly: number, squint: boolean, closed = false, style = LOOK_ROUND) {
       for (const side of [-1, 1]) {
         if (n >= max) return;
         p.copy(c).addScaledVector(toward, r * 0.95).addScaledVector(up, r * 0.18).addScaledVector(right, side * r * 0.4);
         s.setScalar(size);
         mesh.setMatrixAt(n, m.compose(p, camera.quaternion, s));
         look.setXY(n, lx, ly);
-        mode.setX(n, closed ? EYE_CLOSED : squint ? (side < 0 ? EYE_SQUINT_L : EYE_SQUINT_R) : EYE_OPEN);
+        mode.setX(n, closed ? EYE_CLOSED : squint ? (side < 0 ? EYE_SQUINT_L : EYE_SQUINT_R)
+          : style === LOOK_GRUMPY ? (side < 0 ? EYE_GRUMPY_L : EYE_GRUMPY_R) : style === LOOK_GLOW ? EYE_GLOW : EYE_OPEN);
         n++;
       }
     },
