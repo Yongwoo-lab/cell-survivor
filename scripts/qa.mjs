@@ -46,7 +46,16 @@ const INSTRUMENT = () => {
   const raf = window.requestAnimationFrame.bind(window), caf = window.cancelAnimationFrame.bind(window);
   window.requestAnimationFrame = (fn) => { q.raf++; return raf((t) => { q.raf--; fn(t); }); };
   window.cancelAnimationFrame = (id) => { q.raf--; caf(id); };
-  const count = (start) => function (...a) { const n = start.apply(this, a); n.addEventListener('ended', () => q.audioActive--); const s = n.start.bind(n); n.start = (...b) => { q.audioActive++; return s(...b); }; return n; };
+  // 헤드리스 Chrome은 소리 장치가 없어 오디오 시계가 멈춰 있다('ended'가 오지 않음).
+  // 그래서 "시작했는데 정지가 한 번도 예약되지 않은 노드" 수를 센다: 늘어나면 끝나지 않는 소리가 쌓이는 것.
+  const count = (start) => function (...a) {
+    const n = start.apply(this, a);
+    let stopped = false;
+    const s = n.start.bind(n), p = n.stop.bind(n);
+    n.start = (...b) => { q.audioActive++; return s(...b); };
+    n.stop = (...b) => { if (!stopped) { stopped = true; q.audioActive--; } return p(...b); };
+    return n;
+  };
   const AC = window.AudioContext.prototype;
   const co = AC.createOscillator, cb = AC.createBufferSource;
   AC.createOscillator = function () { q.oscCreated++; return count(co).call(this); };
@@ -70,10 +79,15 @@ async function open(name, { size = { width: 1600, height: 900 }, init } = {}) {
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') logs.push(`${m.type()}: ${m.text()}`); });
   page.on('pageerror', (e) => logs.push(`exception: ${e.message}`));
   page.on('response', (r) => { if (r.status() >= 400) logs.push(`http ${r.status()}: ${r.url().replace(BASE, '/')}`); });
+  // 페이지가 죽거나 다시 불러와지면 기록 (장시간 점검 중 원인 추적용)
+  page.on('crash', () => logs.push('page crashed'));
+  page.on('framenavigated', (f) => { if (f === page.mainFrame() && page.__loaded) logs.push(`page reloaded: ${f.url()}`); });
+  page.on('console', (m) => { if (m.text().includes('[vite]') && !m.text().includes('connect')) logs.push(`vite: ${m.text()}`); });
   await page.addInitScript(INSTRUMENT);
   if (init) await page.addInitScript(init);
   await page.goto(`${BASE}?dev=1`);
   await page.waitForFunction(() => window.__qa, null, { timeout: 15000 });
+  page.__loaded = true;
   allLogs.push({ name, logs });
   return { page, ctx, logs };
 }
@@ -223,9 +237,16 @@ const tests = {
     };
     await cycle(); await cycle();
     const a = await stats(page);
-    for (let i = 0; i < 8; i++) await cycle();
+    for (let i = 0; i < 4; i++) await cycle();
+    const m = await stats(page);
+    for (let i = 0; i < 4; i++) await cycle();
     const b = await stats(page);
-    const grew = ['listeners', 'timeouts', 'intervals', 'raf', 'audioActive', 'geometries', 'textures', 'programs'].filter((k) => b[k] > a[k] + (k === 'timeouts' ? 3 : 0));
+    // 리스너·타이머·오디오는 하나라도 늘면 누수.
+    // GPU 자원은 처음 그려질 때 한 번 올라가므로(늦게 처음 나온 모양), 두 구간 모두 늘어야 누수로 본다.
+    const grew = [
+      ...['listeners', 'timeouts', 'intervals', 'raf', 'audioActive'].filter((k) => b[k] > a[k] + (k === 'timeouts' ? 3 : 0)),
+      ...['geometries', 'textures', 'programs'].filter((k) => m[k] > a[k] && b[k] > m[k]),
+    ];
     check('reentry: 10 title↔game cycles leak nothing', grew.length === 0, grew.map((k) => `${k} ${a[k]}→${b[k]}`).join(', ') || `listeners ${b.listeners}, timeouts ${b.timeouts}, geometries ${b.geometries}`);
     await ctx.close();
   },
