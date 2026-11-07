@@ -132,13 +132,13 @@ button { font: inherit; color: inherit; }
 @keyframes stroke { from { stroke-dashoffset: 252; } }
 @keyframes slidein { from { opacity: 0; transform: translateX(-14px); } }
 /* 시작: 렌즈 원으로 좁혀지며 넘어간다 */
-@property --r { syntax: '<length>'; inherits: false; initial-value: 150vmax; }
-#title .lens { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; --r: 150vmax;
-  -webkit-mask-image: radial-gradient(circle at 64% 50%, transparent var(--r), #000 calc(var(--r) + 1px));
-  mask-image: radial-gradient(circle at 64% 50%, transparent var(--r), #000 calc(var(--r) + 1px)); }
+@property --iris { syntax: '<length>'; inherits: false; initial-value: 150vmax; }
+#title .lens { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; --iris: 150vmax;
+  -webkit-mask-image: radial-gradient(circle at 64% 50%, transparent var(--iris), #000 calc(var(--iris) + 1px));
+  mask-image: radial-gradient(circle at 64% 50%, transparent var(--iris), #000 calc(var(--iris) + 1px)); }
 #title.leaving .lens { opacity: 1; animation: irisclose 0.65s cubic-bezier(.6, 0, .4, 1) forwards; }
 #title.leaving .left, #title.leaving .log { transition: opacity 0.3s; opacity: 0; }
-@keyframes irisclose { from { --r: 110vmax; } to { --r: 0vmax; } }
+@keyframes irisclose { from { --iris: 110vmax; } to { --iris: 0vmax; } }
 
 /* ── 자동 시연 안내 ── */
 #demo { position: fixed; top: 78px; left: 0; right: 0; z-index: 4; text-align: center; pointer-events: none; }
