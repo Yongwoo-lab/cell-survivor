@@ -6,13 +6,13 @@ import type { World } from '../game/world';
 import { sfx } from '../audio';
 import cardData from '../data/cards.json';
 
-const ACT_SHOW = 2500, OFFICER_SHOW = 3000, EVOLVE_SHOW = 2500;
+const ACT_SHOW = 4000, OFFICER_SHOW = 3000, EVOLVE_SHOW = 2500;
 const officerLines = dialogue.officer as Record<string, string>;
 
 export function createStory() {
   const act = document.createElement('div');
   act.id = 'act';
-  act.innerHTML = '<h2></h2><p></p>';
+  act.innerHTML = '<h2></h2><i></i><p></p>';
   const officer = document.createElement('div');
   officer.id = 'officer';
   officer.className = 'officer';
@@ -60,7 +60,7 @@ export function createStory() {
       if (w.act !== lastAct) {
         lastAct = w.act;
         const a = dialogue.acts.find((x) => x.id === balance.acts[w.act].id)!;
-        act.querySelector('h2')!.textContent = a.title;
+        act.querySelector('h2')!.textContent = dialogue.ui.actCaption.replace('{n}', String(w.act + 1).padStart(2, '0')).replace('{en}', a.en);
         act.querySelector('p')!.textContent = a.line;
         act.classList.remove('on');
         void act.offsetWidth;

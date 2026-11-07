@@ -35,11 +35,11 @@ function createPlayerMesh() {
   ng.computeVertexNormals();
   const nucleus = new THREE.Mesh(ng, glassy({
     color: 0x18266e, opacity: 0.92, rim: 0x8fa8ff, rimStrength: 0.9, rimPower: 1.8,
-    emissive: 0x3358ff, emissiveIntensity: 0.85, depthWrite: true,
+    emissive: 0x6e9bff, emissiveIntensity: 0.85, depthWrite: true,
   }));
 
   const membrane = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), glassy({
-    color: 0x06200f, opacity: 0.1, rim: 0x4dff86, rimStrength: 1.15, rimPower: 2.6, wobble: 0.06,
+    color: 0x06200f, opacity: 0.1, rim: 0x7bd88f, rimStrength: 1.15, rimPower: 2.6, wobble: 0.06,
   }));
   membrane.renderOrder = 1;
   group.add(nucleus, membrane);
@@ -192,12 +192,12 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
 
   const shotGeo = new THREE.SphereGeometry(balance.shot.radius, 12, 8);
   const shotMesh = instanced(shotGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xc8ffd8).multiplyScalar(0.9) }), 512);
-  const abShotMesh = instanced(shotGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe14a).multiplyScalar(0.95) }), 512);
+  const abShotMesh = instanced(shotGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xe2b857).multiplyScalar(0.95) }), 512);
 
   // 항체 표식: 표식 달린 적 위의 고리
   const markMesh = instanced(
     new THREE.TorusGeometry(COCCUS.radius * 1.9, 0.035, 6, 32).rotateX(Math.PI / 2),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe14a).multiplyScalar(0.9), transparent: true, opacity: 0.75 }),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xe2b857).multiplyScalar(0.9), transparent: true, opacity: 0.75 }),
     MAX_ENEMIES,
   );
 
@@ -205,10 +205,10 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   const macroMax = Math.max(...cardData.cards.find((c) => c.id === 'macrophage')!.levels.map((l) => (l as { count: number }).count))
     + balance.evolutions.activatedMacrophage.extraCount;
   const macroMesh = instanced(new THREE.SphereGeometry(T.orbiterRadius, 32, 20), glassy({
-    color: 0x0c3a1c, opacity: 0.3, rim: 0x4dff86, rimStrength: 1.0, emissive: 0x0d4a20, depthWrite: false,
+    color: 0x0c3a1c, opacity: 0.3, rim: 0x7bd88f, rimStrength: 1.0, emissive: 0x0d4a20, depthWrite: false,
   }), macroMax);
   macroMesh.renderOrder = 1;
-  const nucMat = glassy({ color: 0x18266e, opacity: 0.9, rim: 0x8fa8ff, rimStrength: 0.6, emissive: 0x3358ff, emissiveIntensity: 0.7, depthWrite: true });
+  const nucMat = glassy({ color: 0x18266e, opacity: 0.9, rim: 0x8fa8ff, rimStrength: 0.6, emissive: 0x6e9bff, emissiveIntensity: 0.7, depthWrite: true });
   const macroNuc = instanced(new THREE.IcosahedronGeometry(T.orbiterRadius * 0.42, 2), nucMat, macroMax);
   const nkMesh = instanced(new THREE.IcosahedronGeometry(T.nkRadius, 2), glassy({
     color: 0x1e6a34, opacity: 0.45, rim: 0xb0ffc8, rimStrength: 1.1, emissive: 0x2aa050, emissiveIntensity: 0.5, depthWrite: false,
@@ -225,7 +225,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   );
   const gemMesh = instanced(
     new THREE.OctahedronGeometry(0.2),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xd8ff6a).multiplyScalar(0.85) }),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xe2b857).multiplyScalar(0.85) }),
     2048,
   );
   scene.add(shotMesh, abShotMesh, gemMesh, markMesh, macroMesh, nkMesh, netMesh);
@@ -262,7 +262,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   );
   scene.add(pillMesh, pillHalo);
   const infectColor = new THREE.Color(0xd65cff);
-  const netColor = new THREE.Color(0x8affb0), tmpColor = new THREE.Color();
+  const netColor = new THREE.Color(0x7bd88f), tmpColor = new THREE.Color();
 
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
   const UP = new THREE.Vector3(0, 1, 0);

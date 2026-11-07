@@ -5,14 +5,6 @@
   },
   {
     "type": "font",
-    "name": "Black Han Sans",
-    "author": "The Black Han Sans Project Authors (Zess Type)",
-    "license": "SIL Open Font License 1.1",
-    "source": "https://fonts.google.com/specimen/Black+Han+Sans",
-    "licenseFile": "public/fonts/black-han-sans/OFL.txt"
-  },
-  {
-    "type": "font",
     "name": "Pretendard",
     "author": "Kil Hyung-jin (orioncactus)",
     "license": "SIL Open Font License 1.1",
@@ -21,10 +13,34 @@
   },
   {
     "type": "font",
-    "name": "IBM Plex Mono",
-    "author": "IBM Corp.",
+    "name": "Wanted Sans",
+    "author": "The Wanted Sans Project Authors",
     "license": "SIL Open Font License 1.1",
-    "source": "https://fonts.google.com/specimen/IBM+Plex+Mono",
-    "licenseFile": "public/fonts/IBMPlexMono-OFL.txt"
+    "source": "https://github.com/wanteddev/wanted-sans",
+    "licenseFile": "public/fonts/WantedSans-OFL.txt"
+  },
+  {
+    "type": "font",
+    "name": "Noto Serif KR",
+    "author": "Google Inc.",
+    "license": "SIL Open Font License 1.1",
+    "source": "https://fonts.google.com/noto/specimen/Noto+Serif+KR",
+    "licenseFile": "public/fonts/noto-serif-kr/OFL.txt"
+  },
+  {
+    "type": "font",
+    "name": "JetBrains Mono",
+    "author": "The JetBrains Mono Project Authors",
+    "license": "SIL Open Font License 1.1",
+    "source": "https://fonts.google.com/specimen/JetBrains+Mono",
+    "licenseFile": "public/fonts/JetBrainsMono-OFL.txt"
+  },
+  {
+    "type": "font",
+    "name": "D2Coding",
+    "author": "NAVER Corporation",
+    "license": "SIL Open Font License 1.1",
+    "source": "https://github.com/naver/d2codingfont",
+    "licenseFile": "public/fonts/D2Coding-OFL.txt"
   }
 ]

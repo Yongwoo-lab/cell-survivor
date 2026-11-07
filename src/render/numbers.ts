@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 
 const MAX_GLYPHS = 600, LIFE = 0.75, CRIT_AT = 20; // shortcut: 치명타 규칙이 없어 큰 한 방(20 이상)을 치명타처럼 보여 준다
-const FONT = '"Black Han Sans", "Pretendard", sans-serif';
+const FONT = '"JetBrains Mono", "Pretendard", monospace';
 
 const vertexShader = `
 attribute float aGlyph; attribute vec4 aColor;
@@ -23,7 +23,7 @@ void main() {
 function drawAtlas(canvas: HTMLCanvasElement) {
   const g = canvas.getContext('2d')!;
   g.clearRect(0, 0, canvas.width, canvas.height);
-  g.font = `56px ${FONT}`;
+  g.font = `600 52px ${FONT}`;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.lineJoin = 'round';
@@ -85,7 +85,7 @@ export function createNumbers(scene: THREE.Scene, camera: THREE.Camera) {
         p.set(o.x, o.y, o.z);
         s.setScalar(sc);
         m.compose(p, q, s);
-        const [r, g, b] = o.crit ? [1.0, 0.82, 0.25] : [0.86, 0.9, 0.88];
+        const [r, g, b] = o.crit ? [0.886, 0.722, 0.341] : [0.91, 0.894, 0.855]; // 금 / 따뜻한 미색
         for (let j = 0; j < o.text.length && n < MAX_GLYPHS; j++, n++) {
           local.makeTranslation((j - (o.text.length - 1) / 2) * 0.36, 0, 0);
           mesh.setMatrixAt(n, local.premultiply(m));

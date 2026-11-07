@@ -72,7 +72,7 @@ export function createShockwaves(scene: THREE.Scene) {
     SHOCK_MAX,
   );
   mesh.frustumCulled = false;
-  const color = new THREE.Color(), base = new THREE.Color(0xffe14a);
+  const color = new THREE.Color(), base = new THREE.Color(0xe2b857);
   for (let i = 0; i < SHOCK_MAX; i++) mesh.setColorAt(i, color);
   scene.add(mesh);
   const list: { x: number; z: number; r: number; t: number }[] = [];
@@ -103,7 +103,7 @@ export function createPopups(scene: THREE.Scene, camera: THREE.Camera, text: str
   const c = document.createElement('canvas');
   c.width = 320; c.height = 96;
   const g = c.getContext('2d')!;
-  const font = '56px "Black Han Sans", "Pretendard", sans-serif';
+  const font = '600 44px "D2Coding", "Pretendard", monospace';
   const draw = () => {
     g.clearRect(0, 0, c.width, c.height);
     g.font = font;
@@ -113,7 +113,7 @@ export function createPopups(scene: THREE.Scene, camera: THREE.Camera, text: str
     g.lineWidth = 10;
     g.strokeStyle = 'rgba(20, 20, 24, 0.9)';
     g.strokeText(text, 160, 50);
-    g.fillStyle = '#b8b8c0';
+    g.fillStyle = '#8C9099';
     g.fillText(text, 160, 50);
   };
   draw();
@@ -154,7 +154,7 @@ const RAIN_MAX = 256, RAIN_SPEED = 28, RAIN_FROM = 9;
 export function createRain(scene: THREE.Scene) {
   const mesh = new THREE.InstancedMesh(
     new THREE.BoxGeometry(0.05, 0.7, 0.05),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe14a).multiplyScalar(1.2) }),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0xe2b857).multiplyScalar(1.2) }),
     RAIN_MAX,
   );
   mesh.frustumCulled = false;

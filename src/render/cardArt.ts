@@ -5,7 +5,7 @@ import { glassy } from './materials';
 import { webTexture, clusterGeometry } from './meshes';
 
 const W = 320, H = 200;
-const GFP = 0x52f08a, DAPI = 0x3358ff, RHO = 0xff4a32, GOLD = 0xffd36b, YEL = 0xffe14a, HEAT = 0xff7a30;
+const GFP = 0x7bd88f, DAPI = 0x6e9bff, RHO = 0xff5a4e, GOLD = 0xe2b857, YEL = 0xe2b857, HEAT = 0xff5a4e;
 
 type Art = THREE.Group & { tick?: (t: number) => void };
 
@@ -50,7 +50,7 @@ const BUILD: Record<string, () => Art> = {
   net() {
     const g: Art = new THREE.Group();
     const disc = new THREE.Mesh(new THREE.CircleGeometry(1.25, 48),
-      new THREE.MeshBasicMaterial({ map: webTexture(), color: new THREE.Color(0x8affb0).multiplyScalar(0.8), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      new THREE.MeshBasicMaterial({ map: webTexture(), color: new THREE.Color(0x7bd88f).multiplyScalar(0.8), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
     disc.rotation.x = -1.1;
     g.add(disc);
     [[-0.4, 0.3], [0.5, -0.2], [0.1, 0.6], [-0.2, -0.5]].forEach(([x, z]) => { const c = coccus(0.8); c.position.set(x, 0.1 + z * 0.4, z * 0.45); g.add(c); });

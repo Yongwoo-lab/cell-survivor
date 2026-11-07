@@ -26,9 +26,9 @@
   "antibioticResultNone": "항생제 없이 이겨냈어요! 꼭 필요할 때만 쓰는 것이 내성균을 막는 길이에요.",
   "disclaimer": "게임을 위해 생명과학 개념을 단순화했어요. 실제로는 훨씬 더 정교하게 작동해요.",
   "acts": [
-    { "id": "vessel", "title": "1막 · 혈관", "line": "상처 틈으로 세균이 혈관에 들어왔다!" },
-    { "id": "lung", "title": "2막 · 폐", "line": "감기 바이러스가 폐로 번지고 있다. 세포가 감염되기 전에 막아라!" },
-    { "id": "lymph", "title": "3막 · 림프절", "line": "마지막 방어선, 림프절. 무언가 거대한 것이 다가온다…" }
+    { "id": "vessel", "en": "VESSEL", "title": "1막 · 혈관", "line": "상처 틈으로 세균이 혈관에 들어왔다!" },
+    { "id": "lung", "en": "LUNG", "title": "2막 · 폐", "line": "감기 바이러스가 폐로 번지고 있다. 세포가 감염되기 전에 막아라!" },
+    { "id": "lymph", "en": "LYMPH NODE", "title": "3막 · 림프절", "line": "마지막 방어선, 림프절. 무언가 거대한 것이 다가온다…" }
   ],
   "coldOpen": {
     "tagline": "이 몸의 운명은 3분 안에 결정된다.",
@@ -51,7 +51,7 @@
     "title": "Cell Survivor",
     "pressStart": "아무 키나 눌러 시작",
     "tagline": "당신의 몸속, 3분의 전쟁",
-    "levelUp": "레벨 업!",
+    "levelUp": "LEVEL UP",
     "newCard": "NEW",
     "resist": "내성!",
     "bossWarning": "WARNING",
@@ -100,6 +100,7 @@
     "hp": "HP",
     "xp": "XP",
     "boss": "BOSS",
+    "actCaption": "SAMPLE {n} — {en}",
     "adopted": "채택",
     "materials": "재료",
     "stats": {
