@@ -243,6 +243,20 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
     blob: new THREE.SphereGeometry(1, 24, 16),
   });
   const KIND = Object.fromEntries(ENEMIES.map((e, i) => [e.id, i])) as Record<string, number>;
+
+  // 보스 공격 예고: 바닥에 빨간 범위가 차오른다 (돌진: 길, 가시: 원)
+  const BP = balance.boss.patterns, RED = new THREE.Color(0xff5a4e);
+  const teleMat = (o: number) => new THREE.MeshBasicMaterial({ color: RED, transparent: true, opacity: o, depthWrite: false });
+  const lane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0.5, 0, 0), teleMat(0.12));
+  const laneFill = new THREE.Mesh(lane.geometry, teleMat(0.32));
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2), teleMat(0.1));
+  const discFill = new THREE.Mesh(disc.geometry, teleMat(0.28));
+  const discRim = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 64).rotateX(-Math.PI / 2), teleMat(0.6));
+  for (const t of [lane, laneFill, disc, discFill, discRim]) { t.scale.setScalar(0); t.renderOrder = -1; scene.add(t); }
+  const spikeMesh = instanced(new THREE.ConeGeometry(BP.spikes.radius * 0.7, BP.spikes.radius * 3, 6).rotateZ(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: RED.clone().multiplyScalar(1.15) }), 128);
+  scene.add(spikeMesh);
+  let pendingBoss: { x: number; z: number } | null = null;
   const eyes = createEyes(scene, camera, MAX_ENEMIES * 2 + 2);
   const numbers = createNumbers(scene, camera);
   // 보스의 화난 눈썹
@@ -279,6 +293,17 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
 
   return {
     player,
+    // 보스 처치 연출의 큰 폭발: 조각 수백 개
+    bossExplode() {
+      if (!pendingBoss) return;
+      const { x, z } = pendingBoss, col = kindColors[BOSS];
+      particles.burst(x, 1.5, z, col, 320, 3);
+      particles.burst(x, 1.5, z, flashColor, 120, 2.2);
+      for (const r of [3, 5, 8, 12]) shocks.add(x, z, r);
+      corpses.stain(x, z, 5, col);
+      ripple(x, 1.5, z, 0.09, 1.2);
+      pendingBoss = null;
+    },
     sync(w: World, dt: number, t: number) {
       time.value = t;
       const e0 = w.enemies.f;
@@ -287,14 +312,12 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
       if (w.boss.spawned && !prevBoss) shake(1.2);
       if (w.evolveLog.length > prevEvolve) shake(1.0);
       if (w.boss.phase2 && !prevPhase2) shake(0.8);
-      if (w.deaths.some((d) => d.kind === BOSS)) shake(1.8);
       if (w.fx.hurt) shake(0.35);
       if (w.bursts.length) shake(0.15);
       // 굴절 충격파: 보체 폭발(몇 개만), 진화, 보스 2페이즈, 보스 처치
       for (const b of w.bursts.slice(0, 2)) ripple(b.x, 0.4, b.y, 0.012, 0.45);
       if (w.evolveLog.length > prevEvolve) ripple(w.player.x, 1, w.player.y, 0.05, 0.8);
       if (w.boss.phase2 && !prevPhase2) for (let i = 0; i < w.enemies.count; i++) if (e0.kind[i] === BOSS) ripple(e0.x[i], 1.5, e0.y[i], 0.05, 0.8);
-      for (const d of w.deaths) if (d.kind === BOSS) ripple(d.x, 1.5, d.y, 0.08, 1.1);
       prevBoss = w.boss.spawned; prevEvolve = w.evolveLog.length; prevPhase2 = w.boss.phase2;
       player.position.set(w.player.x, 1, w.player.y);
       // 무적 시간 동안 깜빡임
@@ -438,6 +461,37 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
       gemMesh.count = w.gems.count;
       gemMesh.instanceMatrix.needsUpdate = true;
 
+      // 보스 공격 예고와 가시
+      const ba = w.bossAtk, teleK = ba.state === 'tele' ? 1 - ba.t / BP.telegraph : 0;
+      const showLane = ba.state === 'tele' && ba.type === 'dash', showDisc = ba.state === 'tele' && ba.type === 'spikes';
+      // 안 쓸 때는 크기 0 (보이지 않게 숨기면 처음 나타날 때 셰이더를 준비하느라 끊긴다)
+      if (!showLane) { lane.scale.setScalar(0); laneFill.scale.setScalar(0); }
+      if (!showDisc) { disc.scale.setScalar(0); discFill.scale.setScalar(0); discRim.scale.setScalar(0); }
+      if (showLane) {
+        const len = BP.dash.speed * BP.dash.duration, ang = -Math.atan2(ba.dy, ba.dx);
+        for (const [m_, k] of [[lane, 1], [laneFill, teleK]] as const) {
+          m_.position.set(ba.x, 0.04, ba.y);
+          m_.rotation.y = ang;
+          m_.scale.set(len * k, 1, BP.dash.width);
+        }
+      }
+      if (showDisc) {
+        const R = BP.spikes.telegraphRadius;
+        for (const [m_, k] of [[disc, 1], [discFill, teleK], [discRim, 1]] as const) {
+          m_.position.set(ba.x, 0.04, ba.y);
+          m_.scale.setScalar(R * Math.max(0.001, k));
+        }
+      }
+      const sp = w.spikes.f;
+      for (let k = 0; k < w.spikes.count; k++) {
+        p.set(sp.x[k], 0.9, sp.y[k]);
+        q.setFromAxisAngle(UP, -Math.atan2(sp.vy[k], sp.vx[k]));
+        s.setScalar(1);
+        spikeMesh.setMatrixAt(k, m.compose(p, q, s));
+      }
+      spikeMesh.count = w.spikes.count;
+      spikeMesh.instanceMatrix.needsUpdate = true;
+
       for (const d of w.deaths) {
         const def = ENEMIES[d.kind], col = kindColors[d.kind];
         if (d.kind !== BOSS) corpses.stain(d.x, d.y, def.radius * 2.4, col); // 1.5초 동안 옅은 잔해 얼룩
@@ -449,9 +503,8 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
         if (d.kind === KIND.virus) { corpses.add('shrink', d.x, def.radius + 0.1, d.y, col); continue; }
         if (d.kind === KIND.infected) { corpses.add('melt', d.x, def.radius, d.y, col, 0, def.radius); continue; }
         if (d.kind !== BOSS) { particles.burst(d.x, 0.4, d.y, col); continue; } // 구균·내성균: 터지며 조각
-        particles.burst(d.x, 1.5, d.y, kindColors[d.kind], 160, 2.5);
-        particles.burst(d.x, 1.5, d.y, flashColor, 60, 1.8);
-        for (const r of [3, 5, 8]) shocks.add(d.x, d.y, r);
+        // 보스: 슬로모션·섬광 뒤에 터진다 (bossExplode)
+        pendingBoss = { x: d.x, z: d.y };
       }
       for (const c of w.infections) particles.burst(c.x, 0.6, c.y, infectColor, 14, 0.8);
       for (const h of w.resistHits) popups.add(h.x, 3.6, h.y);

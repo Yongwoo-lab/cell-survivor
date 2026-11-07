@@ -3,6 +3,7 @@ let ctx: AudioContext | null = null;
 let master: GainNode, sfxBus: GainNode, musicBus: GainNode, noiseBuf: AudioBuffer;
 let muted = false;
 const MAX_SAME = 4;
+const MUSIC_LEVEL = 0.5;
 const active: Record<string, number> = {};
 
 export const audio = () => ctx;
@@ -23,7 +24,7 @@ export function unlock(onStart: () => void) {
   sfxBus.gain.value = 0.8;
   sfxBus.connect(master);
   musicBus = ctx.createGain();
-  musicBus.gain.value = 0.5;
+  musicBus.gain.value = MUSIC_LEVEL;
   musicBus.connect(master);
   noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0);
@@ -35,6 +36,20 @@ export function unlock(onStart: () => void) {
 export function setPaused(on: boolean) {
   if (!ctx) return;
   void (on ? ctx.suspend() : ctx.resume());
+}
+
+// 브금 낮추기: level까지 빠르게 내렸다가 hold초 뒤 release초에 걸쳐 복원
+let duckUntil = 0;
+export function duckMusic(level = 0.35, hold = 0.4, release = 0.3) {
+  if (!ctx) return;
+  const t = ctx.currentTime, g = musicBus.gain;
+  if (t + hold < duckUntil && level >= g.value) return; // 더 깊게 낮추는 중이면 그대로
+  duckUntil = t + hold;
+  g.cancelScheduledValues(t);
+  g.setValueAtTime(g.value, t);
+  g.linearRampToValueAtTime(MUSIC_LEVEL * level, t + 0.05);
+  g.setValueAtTime(MUSIC_LEVEL * level, t + hold);
+  g.linearRampToValueAtTime(MUSIC_LEVEL, t + hold + release);
 }
 
 export function setMuted(on: boolean) {

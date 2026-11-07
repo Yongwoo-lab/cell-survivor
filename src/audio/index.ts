@@ -5,7 +5,7 @@ import { sfx } from './sfx';
 import { setMusicMode } from './music';
 
 export { sfx } from './sfx';
-export { unlock, toggleMute, isMuted, setPaused, setMuted } from './engine';
+export { unlock, toggleMute, isMuted, setPaused, setMuted, duckMusic } from './engine';
 import balance from '../data/balance.json';
 const TIERS = balance.juice.comboTiers;
 export const comboTier = (n: number) => TIERS.filter((t) => n >= t).length;
@@ -25,7 +25,8 @@ export function soundFrame(w: World, withSfx: boolean) {
   if (w.fx.pill) sfx.pill();
   if (w.evolveLog.length > prevEvolved) sfx.evolve();
   prevEvolved = w.evolveLog.length;
-  if (w.deaths.length) w.deaths.some((d) => d.kind === BOSS) ? sfx.bossDeath() : sfx.kill(comboTier(w.combo));
+  // 보스 처치 소리는 처치 연출(main의 승리 시퀀스)에서 낸다
+  if (w.deaths.some((d) => d.kind !== BOSS)) sfx.kill(comboTier(w.combo));
   if (comboTier(w.combo) > comboTier(prevCombo)) sfx.combo(comboTier(w.combo));
   prevCombo = w.combo;
   if (w.slowmo > 0 && prevSlowmo <= 0) sfx.levelUp();

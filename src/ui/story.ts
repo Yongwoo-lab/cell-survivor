@@ -30,7 +30,12 @@ export function createStory() {
   const evolve = document.createElement('div');
   evolve.id = 'evolve';
   evolve.hidden = true;
-  document.body.append(act, officer, warn, allOut, evolve);
+  // 보스 등장 이름 카드: 화면 아래 검은 띠 위에
+  const bossCard = document.createElement('div');
+  bossCard.id = 'bosscard';
+  bossCard.innerHTML = `<div class="band"><strong>${dialogue.ui.bossCard.name}</strong><span>${dialogue.ui.bossCard.sub}</span></div>`;
+  document.body.append(act, officer, warn, allOut, evolve, bossCard);
+  let bossShown = false;
 
   let lastAct = -1, seen = 0, notes = 0, evolved = 0, actTimer = 0, officerTimer = 0, evolveTimer = 0, busyUntil = 0;
   const queue: string[] = [];
@@ -53,7 +58,8 @@ export function createStory() {
 
   return {
     reset() {
-      lastAct = -1; seen = 0; notes = 0; evolved = 0; queue.length = 0; busyUntil = 0;
+      lastAct = -1; seen = 0; notes = 0; evolved = 0; queue.length = 0; busyUntil = 0; bossShown = false;
+      bossCard.classList.remove('on');
       act.classList.remove('on'); officer.classList.remove('on'); warn.hidden = true; allOut.hidden = true; evolve.hidden = true;
     },
     update(w: World, sound = true) {
@@ -80,6 +86,11 @@ export function createStory() {
       }
       if (queue.length && performance.now() > busyUntil) showOfficer(queue.shift()!);
       allOut.hidden = !(w.allOut && !w.over);
+      if (w.boss.spawned && !bossShown) {
+        bossShown = true;
+        bossCard.classList.add('on');
+        setTimeout(() => bossCard.classList.remove('on'), 2400);
+      }
       if (w.evolveLog.length > evolved) {
         const ev = cardData.evolutions.find((x) => x.id === w.evolveLog[w.evolveLog.length - 1])!;
         evolved = w.evolveLog.length;

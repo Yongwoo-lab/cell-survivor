@@ -4,6 +4,7 @@ import balance from '../data/balance.json';
 import { Pool } from './pool';
 import { SpatialHash } from './collision';
 import { updateSpawner, addEnemy, kindOf, BOSS } from './spawner';
+import { updateBoss, updateSpikes } from './boss';
 import { type FieldCounts } from './result';
 import { type Pick, cardLevel, updateCards, damageEnemy, drawCards, fireShot, nearestEnemies, atkMul, MAX_RADIUS, FLASH_TIME } from './cards';
 
@@ -53,7 +54,10 @@ export function createWorld() {
     combo: 0,
     comboT: 0,
     dmgNums: [] as { x: number; y: number; v: number }[], // 이번 프레임 피해 숫자 // 정보 장교에게 말할 거리 (dialogue.officer 키)
-    fx: { shot: 0, hit: 0, pickup: 0, hurt: 0, pill: 0, bossHit: 0 }, // 이번 프레임 효과음용 횟수
+    fx: { shot: 0, hit: 0, pickup: 0, hurt: 0, pill: 0, bossHit: 0, bossSpikes: 0 },
+    // 보스 공격: idle → tele(바닥 예고) → dash / 가시 발사
+    bossAtk: { state: 'idle' as 'idle' | 'tele' | 'dash', type: 'spikes' as 'dash' | 'spikes', t: balance.boss.patterns.cooldown, x: 0, y: 0, dx: 0, dy: 0 },
+    spikes: new Pool(128, ['x', 'y', 'vx', 'vy', 'life'] as const), // 이번 프레임 효과음용 횟수
     bossWarn: 0, // >0 이면 보스 등장까지 남은 초 (경고 연출)
     resist: {} as Record<string, number>, // 공격 종류 → 피해 감소율 (보스 내성)
     resistPopCd: 0,
@@ -89,7 +93,7 @@ export function clearEvents(w: World) {
   w.bursts.length = 0;
   w.resistHits.length = 0;
   w.infections.length = 0;
-  w.fx.shot = w.fx.hit = w.fx.pickup = w.fx.hurt = w.fx.pill = w.fx.bossHit = 0;
+  w.fx.shot = w.fx.hit = w.fx.pickup = w.fx.hurt = w.fx.pill = w.fx.bossHit = w.fx.bossSpikes = 0;
   w.rain.length = 0;
   w.noEffectHits.length = 0;
   w.dmgNums.length = 0;
@@ -187,6 +191,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     const dx = tx - e.x[i], dy = ty - e.y[i];
     const d = Math.hypot(dx, dy) || 1;
     if (e.kind[i] === BOSS && d > B.catchUpBeyond) mul *= B.catchUpMul; // 보스는 멀어지면 빠르게 따라붙는다
+    if (e.kind[i] === BOSS && w.bossAtk.state !== 'idle') mul = 0; // 예고·돌진 중에는 패턴이 움직인다
     e.x[i] += (dx / d) * def.speed * mul * dt;
     e.y[i] += (dy / d) * def.speed * mul * dt;
     e.flash[i] -= dt;
@@ -194,6 +199,10 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     e.macroCd[i] -= dt;
     e.squint[i] -= dt;
   }
+  updateBoss(w, dt, BOSS);
+  updateSpikes(w, dt);
+  if (pl.hp <= 0) w.over = true;
+
   // 바이러스가 정상 세포에 닿으면 세포가 감염세포로 바뀐다
   const cf = w.cells.f, hitCell = C.radius + enemies[VIRUS].radius;
   for (let i = 0; i < E.count; i++) {

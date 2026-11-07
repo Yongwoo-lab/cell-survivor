@@ -154,6 +154,17 @@ export const sfx = {
     noise(o, t, { dur: 0.8, vol: 0.06, filter: 'lowpass', f0: 260, f1: 120, attack: 0.2 });
     return 0.9;
   }),
+  // 승리: 장조 화음이 차오르고 위로 펼쳐진다
+  victory: () => voice('victory', (t, o) => {
+    const chords = [[60, 64, 67], [65, 69, 72], [67, 71, 74], [72, 76, 79, 84]];
+    chords.forEach((c, i) => c.forEach((n) => {
+      const f = 440 * 2 ** ((n - 69) / 12);
+      tone(o, t, { type: 'triangle', f0: f, dur: i === 3 ? 1.8 : 0.55, vol: 0.07, at: i * 0.32, attack: 0.03 });
+      tone(o, t, { f0: f / 2, dur: i === 3 ? 1.8 : 0.5, vol: 0.05, at: i * 0.32, attack: 0.05 });
+    }));
+    [72, 76, 79, 84, 88].forEach((n, i) => tone(o, t, { f0: 440 * 2 ** ((n - 69) / 12), dur: 0.5, vol: 0.04, at: 0.96 + i * 0.07 }));
+    return 3;
+  }),
   tick: () => voice('tick', (t, o) => {
     noise(o, t, { dur: 0.03, vol: 0.12, filter: 'bandpass', f0: 3800, q: 6 });
     tone(o, t, { f0: 2200, dur: 0.02, vol: 0.03 });

@@ -24,14 +24,15 @@ import { createCombo } from './ui/combo';
 import { createPause } from './ui/pause';
 import { createPrologue } from './ui/prologue';
 import { tickFps } from './ui/fps';
-import { unlock, startMusic, toggleMute, isMuted, setPaused, setMuted, soundFrame, sfx, onBeat } from './audio';
+import { unlock, startMusic, toggleMute, isMuted, setPaused, setMuted, soundFrame, sfx, onBeat, duckMusic } from './audio';
+import * as THREE from 'three';
 import { installDev } from './dev';
 import balance from './data/balance.json';
 import dialogue from './data/dialogue.json';
 
 // 타이틀 → 콜드 오픈 → 프롤로그 → 플레이 → 엔딩 문장 → 결과 카드 → 랭킹 → 타이틀
 // 타이틀에서 입력이 없으면 demo(자동 시연, 프롤로그 없음)
-type Phase = 'title' | 'cold' | 'prologue' | 'play' | 'ending' | 'result' | 'rank' | 'demo';
+type Phase = 'title' | 'cold' | 'prologue' | 'play' | 'victory' | 'ending' | 'result' | 'rank' | 'demo';
 let phase: Phase = 'title';
 let world: World = createWorld();
 let paused = false, idle = 0, demoPick = 0;
@@ -40,7 +41,7 @@ let bossGlow = 0, coldScale = 1, coldGlow = 0, coldStarted = false;
 let titleT = 0; // 타이틀 등장 연출 진행 (초점이 맞아 가는 정도)
 const BOSS_KIND = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 
-const { scene, camera, composer, setGlow, setAct, setDefocus, useView, setColorblind, ripple, updateRipples } = createScene();
+const { scene, camera, composer, setGlow, setAct, setDefocus, useView, setColorblind, ripple, updateRipples, prewarm } = createScene();
 const titleScene = createTitleScene();
 onBeat(() => titleScene.beat());
 titleScene.onGlare(() => { if (phase === 'title') sfx.growl(); });
@@ -59,6 +60,17 @@ const view = createView(scene, camera, ripple);
 // 히트스톱: 큰 것이 이긴다 (쌓이지 않음). 처치 히트스톱은 0.4초에 한 번까지만.
 const HITSTOP = { kill: 0.03, burst: 0.05, boss: 0.08 };
 let hitstop = 0, killStopCd = 0, prevEvolveN = 0, bossZoomT = 0;
+// 보스 등장: introSeconds 동안 카메라가 보스를 비추고 게임 속도를 줄인다
+let bossIntroT = 0, prevBossSpawned = false;
+const bossFocus = new THREE.Vector3();
+// 보스 처치: 0.5초 슬로모션 → 섬광·폭발 → 0.3초 정적 → 승리 음악 → 엔딩
+let victoryT = -1;
+// 이번 프레임에 세계가 움직였는지. 안 움직인 프레임은 지난 이벤트를 비워 연출이 반복되지 않게 한다.
+let stepped = false;
+const step = (w: World, d: number, mv: { x: number; y: number }) => { stepped = true; updateWorld(w, d, mv); };
+const flashEl = document.createElement('div');
+flashEl.id = 'flash';
+document.body.appendChild(flashEl);
 function feel(w: World, realDt: number) {
   killStopCd -= realDt;
   let want = 0;
@@ -119,6 +131,9 @@ mutedEl.hidden = !settings.muted;
 
 function startGame() {
   world = createWorld();
+  bossIntroT = 0;
+  prevBossSpawned = false;
+  victoryT = -1;
   hitstop = 0;
   prevEvolveN = 0;
   setZoom(0, true);
@@ -296,6 +311,7 @@ const held = (...codes: string[]) => codes.some((c) => keys.has(c));
 
 toTitle();
 view.sync(world, 0, 0);
+prewarm([scene, camera], [titleScene.scene, titleScene.camera]);
 followCamera(camera, view.player.position, 0, true);
 
 let last = performance.now();
@@ -306,7 +322,6 @@ function frame(now: number) {
   if (phase === 'title' && !codex.isOpen && !ranking.boardOpen && (idle += realDt) > balance.attract.idleSeconds) startDemo();
   if (phase === 'play' && (paused || hitstop > 0)) {
     if (!paused) hitstop -= realDt; // 히트스톱: 세계가 잠깐 멈춤
-    clearEvents(world); // 멈춘 동안 지난 프레임 연출·소리가 반복되지 않게
   }
   else if (phase === 'play' && !paused) {
     const move = {
@@ -314,10 +329,14 @@ function frame(now: number) {
       y: +held('ArrowDown', 'KeyS') - +held('ArrowUp', 'KeyW'),
     };
     setLead(move.x * 1.6, move.y * 1.6); // 이동 방향으로 약간 앞을 본다
-    updateWorld(world, dt, move);
+    if (world.boss.spawned && !prevBossSpawned) { bossIntroT = balance.boss.introSeconds; duckMusic(0.35, 0.6); }
+    prevBossSpawned = world.boss.spawned;
+    step(world, bossIntroT > 0 ? dt * balance.boss.introTimeScale : dt, move);
+    bossIntroT -= realDt;
     feel(world, realDt);
     recordCodex(world);
-    if (world.over) {
+    if (world.over && world.won) { phase = 'victory'; victoryT = 0; story.reset(); }
+    else if (world.over) {
       phase = 'ending';
       story.reset();
       result.show(world, () => { phase = 'result'; });
@@ -328,11 +347,11 @@ function frame(now: number) {
       demoPick = 0;
       selectCard(world, Math.floor(Math.random() * world.choosing.length));
     }
-    updateWorld(world, dt, demoBot(world, dt));
+    step(world, dt, demoBot(world, dt));
     if (world.over) toTitle();
-  } else if (phase === 'prologue') updateWorld(world, dt, { x: 0, y: 0 });
+  } else if (phase === 'prologue') step(world, dt, { x: 0, y: 0 });
   else if (phase === 'cold') {
-    updateWorld(world, dt * coldScale, { x: 0, y: 0 });
+    step(world, dt * coldScale, { x: 0, y: 0 });
     world.dmgNums.length = 0; // 장면을 깔끔하게: 피해 숫자·항원 조각 없음
     world.gems.count = 0;
   }
@@ -340,13 +359,39 @@ function frame(now: number) {
   const titleView = phase === 'title' || (phase === 'cold' && !coldStarted);
   useView(titleView ? titleScene.scene : scene, titleView ? titleScene.camera : camera, titleView);
   if (titleView) { titleScene.update(realDt); titleT = Math.min(1, titleT + realDt / title.entranceSeconds); }
+  if (!stepped) clearEvents(world); // 세계가 안 움직인 프레임: 지난 이벤트로 연출·소리가 반복되지 않게
+  stepped = false;
   dev.frame(world);
   soundFrame(world, phase === 'play' || phase === 'cold');
   const frozen = phase === 'play' && hitstop > 0;
-  view.sync(world, frozen ? 0 : dt, now / 1000);
+  if (phase === 'victory') {
+    const prev = victoryT;
+    victoryT += realDt;
+    if (prev < 0.5 && victoryT >= 0.5) { // 섬광 + 큰 폭발
+      flashEl.classList.remove('on'); void flashEl.offsetWidth; flashEl.classList.add('on');
+      view.bossExplode();
+      shake(2);
+      bossGlow = 1;
+      sfx.bossDeath();
+      duckMusic(0, 0.3 + 2.4, 0.8); // 정적 0.3초, 승리 음악 동안도 브금은 낮게
+    }
+    if (prev < 0.8 && victoryT >= 0.8) sfx.victory();
+    if (prev < 3.6 && victoryT >= 3.6) {
+      phase = 'ending';
+      result.show(world, () => { phase = 'result'; });
+    }
+  }
+  view.sync(world, frozen ? 0 : phase === 'victory' && victoryT < 0.5 ? dt * 0.2 : dt, now / 1000);
   updateRipples(paused ? 0 : realDt);
   setAct(world.act, dt);
-  followCamera(camera, view.player.position, dt);
+  // 보스 등장 동안은 보스를 비춘다
+  let focus = view.player.position;
+  if (bossIntroT > 0 && phase === 'play') {
+    const e = world.enemies.f;
+    for (let i = 0; i < world.enemies.count; i++) if (e.kind[i] === BOSS_KIND) bossFocus.set(e.x[i], 1, e.y[i]);
+    focus = bossFocus;
+  }
+  followCamera(camera, focus, dt);
   // 빛 번짐은 레벨업·진화·보스 처치 순간에만
   if (world.deaths.some((d) => d.kind === BOSS_KIND)) bossGlow = 1;
   bossGlow = Math.max(0, bossGlow - realDt * 0.7);
@@ -358,7 +403,7 @@ function frame(now: number) {
   ));
   coldGlow = Math.max(0, coldGlow - realDt * 0.9);
   composer.render();
-  const inGame = phase === 'play' || phase === 'ending' || phase === 'demo';
+  const inGame = phase === 'play' || phase === 'victory' || phase === 'ending' || phase === 'demo';
   updateHud(inGame ? world : null);
   updateCombo(inGame ? world : null);
   updatePicker(world);

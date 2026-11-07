@@ -101,6 +101,7 @@
     "xp": "XP",
     "boss": "BOSS",
     "actCaption": "SAMPLE {n} — {en}",
+    "bossCard": { "name": "SUPERBUG", "sub": "항생제 내성균" },
     "specimen": "SPECIMEN 001 · HUMAN IMMUNE RESPONSE · ×1000",
     "logo": ["CELL", "SURVIVOR"],
     "titleSub": "셀 서바이버 — 당신의 몸속, 3분의 전쟁",
