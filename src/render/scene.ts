@@ -175,5 +175,5 @@ export function createScene() {
   // 시작할 때 모든 재질의 셰이더를 미리 준비 (게임 중 처음 나오는 적·효과에서 끊기지 않게)
   const prewarm = (...views: [THREE.Scene, THREE.Camera][]) => { for (const [s, c] of views) renderer.compile(s, c); };
 
-  return { scene, camera, composer, setGlow, setAct: bg.setAct, setDefocus, useView, setColorblind, ripple, updateRipples, prewarm };
+  return { renderer, scene, camera, composer, setGlow, setAct: bg.setAct, setDefocus, useView, setColorblind, ripple, updateRipples, prewarm };
 }

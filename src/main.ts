@@ -41,7 +41,7 @@ let bossGlow = 0, coldScale = 1, coldGlow = 0, coldStarted = false;
 let titleT = 0; // 타이틀 등장 연출 진행 (초점이 맞아 가는 정도)
 const BOSS_KIND = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 
-const { scene, camera, composer, setGlow, setAct, setDefocus, useView, setColorblind, ripple, updateRipples, prewarm } = createScene();
+const { renderer, scene, camera, composer, setGlow, setAct, setDefocus, useView, setColorblind, ripple, updateRipples, prewarm } = createScene();
 const titleScene = createTitleScene();
 onBeat(() => titleScene.beat());
 titleScene.onGlare(() => { if (phase === 'title') sfx.growl(); });
@@ -272,6 +272,8 @@ function startDemo() {
 
 const dev = installDev({
   world: () => world,
+  phase: () => (paused ? 'paused' : phase),
+  info: () => ({ ...renderer.info.memory, programs: renderer.info.programs?.length ?? 0, ...view.debug(), enemies: world.enemies.count }),
   restartFromTop() {
     setPause(false);
     toTitle();

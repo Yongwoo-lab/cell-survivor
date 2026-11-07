@@ -293,6 +293,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Rip
 
   return {
     player,
+    debug: () => ({ particles: particles.count }),
     // 보스 처치 연출의 큰 폭발: 조각 수백 개
     bossExplode() {
       if (!pendingBoss) return;

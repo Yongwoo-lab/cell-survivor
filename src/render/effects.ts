@@ -23,6 +23,7 @@ export function createParticles(scene: THREE.Scene) {
 
   const m = new THREE.Matrix4();
   return {
+    get count() { return count; },
     burst(x: number, y: number, z: number, base: THREE.Color, n = PER_BURST, power = 1) {
       for (let k = 0; k < n && count < MAX; k++, count++) {
         const i = count, a = Math.random() * Math.PI * 2, sp = (2 + Math.random() * 5) * power;

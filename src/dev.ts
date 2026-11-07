@@ -6,6 +6,8 @@ import { EVOLUTIONS } from './game/cards';
 
 export interface DevHooks {
   world(): World;
+  phase(): string;
+  info(): Record<string, number>;
   restartFromTop(): void; // 콜드 오픈부터 다시
   typing(): boolean; // 이름 입력 중이면 H를 가로채지 않는다
 }
@@ -17,6 +19,8 @@ const HELP: [string, string][] = [
 
 export function installDev(h: DevHooks) {
   if (new URLSearchParams(location.search).get('dev') !== '1') return { frame() {} };
+  // 자동 점검(npm run qa)이 읽는 상태. 개발 모드에서만 존재한다.
+  (window as unknown as { __qa: unknown }).__qa = { world: h.world, phase: h.phase, info: h.info, bossKind: kindOf(balance.boss.id) };
   let god = false;
   const badge = document.createElement('div');
   badge.id = 'dev';
