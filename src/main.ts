@@ -294,7 +294,10 @@ addEventListener('keydown', (e) => {
   if (phase === 'rank') { if (ranking.key(e)) toTitle(); return; }
   if (phase === 'prologue') return prologue.key(e);
   if (phase === 'cold') return coldOpen.key(e);
-  if (paused) return pause.key(e);
+  if (paused) {
+    if (e.code === 'KeyM') { mute(); pause.refresh(); return; } // 일시정지 중에도 M으로 소리 켜기·끄기
+    return pause.key(e);
+  }
   if (phase === 'play' && (e.code === 'Escape' || e.code === 'KeyP')) { if (canPause()) setPause(true); return; }
   if (e.code === 'KeyM') return mute();
   if (phase === 'demo') toTitle();
