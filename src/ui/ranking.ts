@@ -41,7 +41,7 @@ export function createRanking() {
   root.id = 'ranking';
   root.hidden = true;
   document.body.appendChild(root);
-  let score = 0, name = '', entering = false, saved: Entry | undefined;
+  let score = 0, name = '', entering = false, saved: Entry | undefined, board = false;
 
   const render = () => {
     const list = topToday(N);
@@ -56,7 +56,7 @@ export function createRanking() {
     }
     root.innerHTML = `<div class="rk">
       <h2>${U.ranking}</h2>
-      <p class="mine">${U.yourScore} <b>${score}</b></p>
+      ${board ? '' : `<p class="mine">${U.yourScore} <b>${score}</b></p>`}
       ${entering ? `<p class="prompt">${U.enterName}</p>` : ''}
       <ol>${rows || `<li class="empty">${U.rankEmpty}</li>`}</ol>
       ${entering ? '' : `<p class="back">${U.backToTitle}</p>`}
@@ -73,7 +73,16 @@ export function createRanking() {
       render();
       root.hidden = false;
     },
-    hide() { root.hidden = true; },
+    hide() { root.hidden = true; board = false; },
+    // 타이틀 메뉴의 '오늘의 랭킹': 읽기 전용
+    showBoard() {
+      board = true;
+      entering = false;
+      saved = undefined;
+      render();
+      root.hidden = false;
+    },
+    get boardOpen() { return board && !root.hidden; },
     get entering() { return entering; },
     // true를 돌려주면 랭킹 화면을 끝내고 타이틀로
     key(e: KeyboardEvent) {

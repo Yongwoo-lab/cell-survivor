@@ -148,6 +148,12 @@ export const sfx = {
     noise(o, t, { dur: 0.45, vol: 0.08, filter: 'bandpass', f0: 400, f1: 2400, q: 1.5, at: 0.1, attack: 0.2 });
     return 0.6;
   }),
+  // 타이틀: 어둠 속에서 들리는 낮은 으르렁
+  growl: () => voice('growl', (t, o) => {
+    tone(o, t, { type: 'sawtooth', f0: 52, f1: 40, dur: 0.9, vol: 0.06, attack: 0.15 });
+    noise(o, t, { dur: 0.8, vol: 0.06, filter: 'lowpass', f0: 260, f1: 120, attack: 0.2 });
+    return 0.9;
+  }),
   tick: () => voice('tick', (t, o) => {
     noise(o, t, { dur: 0.03, vol: 0.12, filter: 'bandpass', f0: 3800, q: 6 });
     tone(o, t, { f0: 2200, dur: 0.02, vol: 0.03 });

@@ -5,7 +5,7 @@ import { sfx } from './sfx';
 import { setMusicMode } from './music';
 
 export { sfx } from './sfx';
-export { unlock, toggleMute, isMuted, setPaused } from './engine';
+export { unlock, toggleMute, isMuted, setPaused, setMuted } from './engine';
 import balance from '../data/balance.json';
 const TIERS = balance.juice.comboTiers;
 export const comboTier = (n: number) => TIERS.filter((t) => n >= t).length;

@@ -14,6 +14,8 @@ import { createCardPicker } from './ui/cards';
 import { createDeck } from './ui/deck';
 import { createCardArt } from './render/cardArt';
 import { createTitle } from './ui/title';
+import { loadSettings, saveSettings } from './ui/settings';
+import { createTitleScene } from './render/titleScene';
 import { createStory } from './ui/story';
 import { createResult } from './ui/result';
 import { createRanking } from './ui/ranking';
@@ -22,7 +24,7 @@ import { createCombo } from './ui/combo';
 import { createPause } from './ui/pause';
 import { createPrologue } from './ui/prologue';
 import { tickFps } from './ui/fps';
-import { unlock, startMusic, toggleMute, isMuted, setPaused, soundFrame, sfx } from './audio';
+import { unlock, startMusic, toggleMute, isMuted, setPaused, setMuted, soundFrame, sfx, onBeat } from './audio';
 import { installDev } from './dev';
 import balance from './data/balance.json';
 import dialogue from './data/dialogue.json';
@@ -30,16 +32,28 @@ import dialogue from './data/dialogue.json';
 // 타이틀 → 콜드 오픈 → 프롤로그 → 플레이 → 엔딩 문장 → 결과 카드 → 랭킹 → 타이틀
 // 타이틀에서 입력이 없으면 demo(자동 시연, 프롤로그 없음)
 type Phase = 'title' | 'cold' | 'prologue' | 'play' | 'ending' | 'result' | 'rank' | 'demo';
-const TITLE_SPEED = 0.35; // 타이틀 배경: 실제 게임 장면을 느리게
 let phase: Phase = 'title';
 let world: World = createWorld();
 let paused = false, idle = 0, demoPick = 0;
 let demoBot = createBot(BOTS.novice);
-let bossGlow = 0, coldScale = 1, coldGlow = 0;
-let titleBot = createBot(BOTS.novice);
+let bossGlow = 0, coldScale = 1, coldGlow = 0, coldStarted = false;
+let titleT = 0; // 타이틀 등장 연출 진행 (초점이 맞아 가는 정도)
 const BOSS_KIND = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 
-const { scene, camera, composer, setGlow, setAct, setDefocus } = createScene();
+const { scene, camera, composer, setGlow, setAct, setDefocus, useView, setColorblind } = createScene();
+const titleScene = createTitleScene();
+onBeat(() => titleScene.beat());
+titleScene.onGlare(() => { if (phase === 'title') sfx.growl(); });
+addEventListener('resize', () => titleScene.resize());
+
+// 설정: 소리, 색약 모드 (기기에 남음)
+const settings = loadSettings();
+const applySettings = () => {
+  setMuted(settings.muted);
+  document.body.classList.toggle('cb', settings.cb);
+  setColorblind(settings.cb);
+};
+applySettings();
 const view = createView(scene, camera);
 const updateHud = createHud();
 const cardArt = createCardArt();
@@ -56,20 +70,35 @@ const updatePicker = createCardPicker({
   focus: (i) => { artFocus = i; },
   deckTarget: () => deck.target(),
 });
-const title = createTitle();
+const title = createTitle({
+  start: () => startColdOpen(),
+  codex: () => codex.open(),
+  rank: () => ranking.showBoard(),
+  settings: () => settings,
+  toggle(k) {
+    settings[k] = !settings[k];
+    saveSettings(settings);
+    applySettings();
+    mutedEl.hidden = !settings.muted;
+  },
+});
 const story = createStory();
 const result = createResult();
 const ranking = createRanking();
 const codex = createCodex();
 const updateCombo = createCombo();
-title.onCodex(() => { if (phase === 'title') codex.open(); });
 
 const mutedEl = document.createElement('div');
 mutedEl.id = 'muted';
 mutedEl.hidden = true;
 mutedEl.textContent = dialogue.ui.muted;
 document.body.appendChild(mutedEl);
-const mute = () => { mutedEl.hidden = !toggleMute(); };
+const mute = () => {
+  settings.muted = toggleMute();
+  saveSettings(settings);
+  mutedEl.hidden = !settings.muted;
+};
+mutedEl.hidden = !settings.muted;
 
 function startGame() {
   world = createWorld();
@@ -115,6 +144,7 @@ function coldWorld() {
 
 const coldOpen = createColdOpen({
   setup() {
+    coldStarted = true;
     world = coldWorld();
     setLift(0.1);
     followCamera(camera, view.player.position, 0, true);
@@ -146,7 +176,9 @@ const coldOpen = createColdOpen({
 
 function startColdOpen() {
   phase = 'cold';
+  coldStarted = false;
   title.showDemo(false);
+  titleScene.dive();
   title.focusOut(() => { if (phase === 'cold') coldOpen.play(); });
 }
 
@@ -185,10 +217,11 @@ function toTitle() {
   story.reset();
   title.showDemo(false);
   world = createWorld();
-  titleBot = createBot(BOTS.novice);
-  setLift(0.3);
+  setLift(0);
   phase = 'title';
   idle = 0;
+  titleT = 0;
+  titleScene.reset();
   title.showTitle(true);
 }
 
@@ -219,6 +252,7 @@ addEventListener('keydown', (e) => {
   if (e.repeat) return;
   idle = 0;
   if (codex.isOpen) return void codex.key(e);
+  if (ranking.boardOpen) { if (['Enter', 'Escape', 'KeyR', 'Space'].includes(e.code)) ranking.hide(); return; }
   if (phase === 'rank') { if (ranking.key(e)) toTitle(); return; }
   if (phase === 'prologue') return prologue.key(e);
   if (phase === 'cold') return coldOpen.key(e);
@@ -227,8 +261,8 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyM') return mute();
   if (phase === 'demo') toTitle();
   else if (phase === 'title') {
-    if (e.code === 'KeyD') return codex.open();
-    startColdOpen();
+    if (title.key(e)) return;
+    if (e.code === 'KeyD') codex.open();
   } else if (phase === 'result' && (e.code === 'Enter' || e.code === 'KeyR')) {
     result.hide();
     ranking.show(score(world));
@@ -248,7 +282,7 @@ function frame(now: number) {
   const realDt = Math.min((now - last) / 1000, 0.1);
   last = now;
   const dt = paused ? 0 : realDt; // 일시정지: 게임 시간과 화면 효과 모두 멈춤
-  if (phase === 'title' && !codex.isOpen && (idle += realDt) > balance.attract.idleSeconds) startDemo();
+  if (phase === 'title' && !codex.isOpen && !ranking.boardOpen && (idle += realDt) > balance.attract.idleSeconds) startDemo();
   if (phase === 'play' && !paused) {
     const move = {
       x: +held('ArrowRight', 'KeyD') - +held('ArrowLeft', 'KeyA'),
@@ -275,14 +309,10 @@ function frame(now: number) {
     world.dmgNums.length = 0; // 장면을 깔끔하게: 피해 숫자·항원 조각 없음
     world.gems.count = 0;
   }
-  else if (phase === 'title' && !codex.isOpen) {
-    // 타이틀 배경: 초보 봇이 느리게 플레이 (무적). 너무 오래 흐르면 처음부터.
-    const tdt = dt * TITLE_SPEED;
-    if (world.choosing) selectCard(world, Math.floor(Math.random() * world.choosing.length));
-    updateWorld(world, tdt, titleBot(world, tdt));
-    world.player.hp = world.player.maxHp;
-    if (world.time > 110) { world = createWorld(); titleBot = createBot(BOTS.novice); }
-  }
+  // 타이틀(과 시작 직후 렌즈가 좁혀지는 동안)은 백혈구 클로즈업 장면, 나머지는 게임 장면
+  const titleView = phase === 'title' || (phase === 'cold' && !coldStarted);
+  useView(titleView ? titleScene.scene : scene, titleView ? titleScene.camera : camera, titleView);
+  if (titleView) { titleScene.update(realDt); titleT = Math.min(1, titleT + realDt / title.entranceSeconds); }
   dev.frame(world);
   soundFrame(world, phase === 'play' || phase === 'cold');
   view.sync(world, dt, now / 1000);
@@ -306,7 +336,8 @@ function frame(now: number) {
   deck.update(inGame ? world : null);
   cardArt.render(realDt, artFocus);
   // 레벨업 슬로모션부터 카드 고르는 동안 초점이 나간다
-  const wantDefocus = world.choosing ? 1 : world.slowmo > 0 ? 1 - world.slowmo / balance.levelUp.slowmoTime : 0;
+  const wantDefocus = phase === 'title' ? 1 - titleT // 처음 나타날 때 초점이 맞듯 선명해짐
+    : world.choosing ? 1 : world.slowmo > 0 ? 1 - world.slowmo / balance.levelUp.slowmoTime : 0;
   defocus += (wantDefocus - defocus) * Math.min(1, realDt * 10);
   setDefocus(defocus < 0.01 ? 0 : defocus);
   if ((phase === 'play' && !paused) || phase === 'demo') story.update(world, phase === 'play');

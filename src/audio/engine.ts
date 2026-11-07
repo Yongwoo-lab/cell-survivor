@@ -17,6 +17,7 @@ export function unlock(onStart: () => void) {
   }
   ctx = new AudioContext();
   master = ctx.createGain();
+  master.gain.value = muted ? 0 : 1;
   master.connect(ctx.destination);
   sfxBus = ctx.createGain();
   sfxBus.gain.value = 0.8;
@@ -34,6 +35,11 @@ export function unlock(onStart: () => void) {
 export function setPaused(on: boolean) {
   if (!ctx) return;
   void (on ? ctx.suspend() : ctx.resume());
+}
+
+export function setMuted(on: boolean) {
+  muted = on;
+  if (ctx) master.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.03);
 }
 
 export function toggleMute() {
