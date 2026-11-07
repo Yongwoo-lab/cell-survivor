@@ -33,13 +33,12 @@ export function createTitle(h: TitleHooks) {
   root.hidden = true;
   root.innerHTML = `
     <section class="left">
-      <div class="specimen"><span>${U.specimen}</span><i></i></div>
       ${logo()}
-      <p class="sub">${U.titleSub}</p>
+      <p class="sub">${U.tagline}</p>
       <nav class="menu"></nav>
+      <p class="hint">${U.titleHint}</p>
     </section>
-    <aside class="log"><h3>${U.logTitle}</h3><table></table></aside>
-    <footer class="strip"><span>${U.footerLeft}</span><span>${U.footerRight}</span></footer>
+    <aside class="log"><h3>${U.ranking}</h3><table></table></aside>
     <div class="lens"></div>`;
   const demo = document.createElement('div');
   demo.id = 'demo';
@@ -48,6 +47,7 @@ export function createTitle(h: TitleHooks) {
   document.body.append(root, demo);
   const nav = root.querySelector<HTMLElement>('.menu')!;
   const table = root.querySelector('table')!;
+  const log = root.querySelector<HTMLElement>('.log')!;
   const logoEl = root.querySelector<HTMLElement>('.logo')!;
   let sel = 0, inSettings = false, seen = false, leaving = false;
 
@@ -66,10 +66,10 @@ export function createTitle(h: TitleHooks) {
       `<button data-i="${i}" class="${i === sel ? 'sel' : ''}" style="--i:${i}"><span>${label}</span>${v ? `<em>${v}</em>` : ''}</button>`).join('');
   };
   const renderLog = () => {
+    // 기록이 없으면 랭킹 영역 자체를 숨긴다
     const top = topToday(balance.score.titleSize);
-    table.innerHTML = top.length
-      ? top.map((e, i) => `<tr><td>${String(i + 1).padStart(2, '0')}</td><td>${e.name}</td><td>${String(e.score).padStart(5, '0')}</td></tr>`).join('')
-      : `<tr><td>${U.rankEmpty}</td></tr>`;
+    log.hidden = !top.length;
+    table.innerHTML = top.map((e, i) => `<tr><td>${i + 1}</td><td>${e.name}</td><td>${e.score}</td></tr>`).join('');
   };
 
   const activate = () => {

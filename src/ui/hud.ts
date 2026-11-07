@@ -6,13 +6,13 @@ import type { World } from '../game/world';
 
 const U = dialogue.ui;
 const bossName = enemies.find((e) => e.id === balance.boss.id)!.name;
-const place = (act: number) => dialogue.acts.find((a) => a.id === balance.acts[act].id)!.title.split('·').pop()!.trim();
+const actTitle = (act: number) => dialogue.acts.find((a) => a.id === balance.acts[act].id)!.title;
 const pad = (n: number, w = 3) => String(Math.max(0, Math.round(n))).padStart(w, '0');
 
 export function createHud() {
   const scope = document.createElement('div');
   scope.id = 'scope';
-  scope.innerHTML = `<span class="mag">${U.magnification}</span><span class="sample sticker"></span>
+  scope.innerHTML = `<span class="mag">${U.magnification}</span><span class="sample"></span>
     <div class="scalebar"><i></i><span>${U.scaleBar}</span></div>`;
   const root = document.createElement('div');
   root.id = 'hud';
@@ -50,7 +50,7 @@ export function createHud() {
     if (w.antibioticT > 0) pill.textContent = `${U.antibiotic} ${pad(Math.ceil(w.antibioticT), 2)}s`;
     if (w.act !== lastAct) {
       lastAct = w.act;
-      sample.textContent = U.sample.replace('{n}', pad(w.act + 1, 2)).replace('{place}', place(w.act));
+      sample.textContent = actTitle(w.act);
     }
     fever.style.opacity = String((w.cards.fever ?? 0) * 0.22);
   };

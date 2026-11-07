@@ -42,7 +42,6 @@ export function createResult() {
         const kills = w.kills.reduce((a, b) => a + b, 0);
         card.className = w.won ? 'won' : 'lost';
         card.innerHTML = `<div class="rc">
-          <div class="rc-top">${U.title}</div>
           <h1>${f.title}</h1>
           <h2>${f.subtitle}</h2>
           <p class="desc">${f.description}</p>

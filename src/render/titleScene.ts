@@ -48,7 +48,8 @@ export function createTitleScene() {
   const cocci = Array.from({ length: 6 }, (_, i) => {
     const m = new THREE.Mesh(clusterGeometry(4, 0.45), cocMat);
     scene.add(m);
-    return { m, t: i / 6, x: -6 + Math.random() * 8, y: -3 + Math.random() * 6, spin: Math.random() * 2 };
+    // 오른쪽 절반에서만 (왼쪽 로고·메뉴 영역에는 들어오지 않게)
+    return { m, t: i / 6, x: 1.5 + Math.random() * 6, y: -3 + Math.random() * 6, spin: Math.random() * 2 };
   });
 
   // 어둠 속 보스의 눈

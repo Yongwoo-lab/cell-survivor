@@ -21,7 +21,7 @@ export function createPause(act: (a: Action) => void, isMuted: () => boolean) {
     ({ resume: U.resume, restart: U.restart, sound: isMuted() ? U.soundOn : U.soundOff, codex: U.codex, title: U.toTitle })[a];
   const render = () => {
     root.innerHTML = `<div class="pz"><h2>${U.pause}</h2>${items.map((a, i) =>
-      `<button data-a="${a}" class="${i === sel ? 'sel' : ''}">${label(a)}</button>`).join('')}<small>${U.pauseHint}</small></div>`;
+      `<button data-a="${a}" class="${i === sel ? 'sel' : ''}">${label(a)}</button>`).join('')}</div>`;
   };
   root.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('button');

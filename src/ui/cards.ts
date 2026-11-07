@@ -10,24 +10,35 @@ import { sfx } from '../audio';
 const U = dialogue.ui;
 const fieldName = Object.fromEntries(fields.map((f) => [f.id, f.name]));
 const cardName = Object.fromEntries(cardData.cards.map((c) => [c.id, c.name]));
-const STATS: Record<string, string[]> = U.stats;
 const FLIP_GAP = 120, STAMP_MS = 250, FLY_MS = 380;
-
 const no = (c: Pick) => isEvolution(c)
   ? `No.E${cardData.evolutions.findIndex((e) => e.id === c.id) + 1}`
   : `No.${String(cardData.cards.findIndex((e) => e.id === c.id) + 1).padStart(2, '0')}`;
-const num = (v: number, unit: string) => unit === '%' ? `${+(v * 100).toFixed(1)}%` : `${+v.toFixed(2)}${unit}`;
 
-// 이번 단계에서 바뀌는 수치만 ("피해 12 → 16"). 처음이면 1단계 값 몇 개.
+const STATS: Record<string, string> = U.stats;
+const BY_CARD: Record<string, Record<string, string>> = U.statsByCard;
+
+// 수치를 사람이 읽는 말로: 템플릿 "피해 {v}", "공격 속도 +{v}%", "재사용 {v}초". 숫자만 고정폭.
+function statLine(cardId: string, key: string, next: number, prev?: number) {
+  const tpl = BY_CARD[cardId]?.[key] ?? STATS[key] ?? `${key} {v}`;
+  const [before, after = ''] = tpl.split('{v}');
+  const sign = before.endsWith('+') ? '+' : '';
+  const label = before.slice(0, before.length - sign.length).trim();
+  const pct = after.startsWith('%');
+  const num = (v: number, bold: boolean) => {
+    const x = +(pct ? v * 100 : v).toFixed(pct ? 1 : 2);
+    return `<${bold ? 'b' : 'span'} class="n">${sign}${x}</${bold ? 'b' : 'span'}>${after}`;
+  };
+  return `<span>${label ? `${label} ` : ''}${prev === undefined ? num(next, false) : `${num(prev, false)} → ${num(next, true)}`}</span>`;
+}
+
+// 이미 가진 카드는 바뀌는 값만 ("피해 12 → 16", 새 값 굵게), 처음이면 값만
 function deltas(c: Pick, cur: number) {
   if (isEvolution(c)) {
-    return `${U.materials} · ${Object.entries(c.requires).map(([id, lv]) => `${cardName[id]} ${lv}`).join(' + ')}`;
+    return `<span>${U.materials}: ${Object.entries(c.requires).map(([id, lv]) => `${cardName[id]} <span class="n">${lv}</span>`).join(' + ')}</span>`;
   }
   const next = c.levels[cur] as Record<string, number>, prev = cur ? (c.levels[cur - 1] as Record<string, number>) : null;
-  return Object.keys(next).filter((k) => !prev || prev[k] !== next[k]).slice(0, prev ? 4 : 3).map((k) => {
-    const [label, unit] = STATS[k] ?? [k, ''];
-    return `<b>${label} ${prev ? `${num(prev[k], unit)} → ` : ''}${num(next[k], unit)}</b>`;
-  }).join('');
+  return Object.keys(next).filter((k) => !prev || prev[k] !== next[k]).map((k) => statLine(c.id, k, next[k], prev?.[k])).join('');
 }
 
 const MICROSCOPE = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1h3v2H8v5.2a3 3 0 1 1-2 0V3H6zM3 14h10v1H3zm2-2h6v1H5z" fill="currentColor"/></svg>`;
@@ -108,7 +119,7 @@ export function createCardPicker(h: PickerHooks) {
         : cur ? Array.from({ length: max }, (_, k) => `<i class="${k < cur ? 'on' : k === cur ? 'next' : ''}"></i>`).join('') : `<span class="new">${U.newCard}</span>`;
       return `<button class="card${evo ? ' evo' : ''}" data-i="${i}" style="--delay:${i * FLIP_GAP}ms; --fc: var(--field-${c.field})">
         <div class="face">
-          <header class="band"><span class="swatch"></span><span>${fieldName[c.field] ?? c.field}</span><span class="no">${no(c)}</span></header>
+          <header class="band"><span class="chip"><i></i>${fieldName[c.field] ?? c.field}</span><span class="no">${no(c)}</span></header>
           <canvas class="art" width="320" height="200"></canvas>
           <div class="title"><h3>${c.name}</h3><span class="dots">${dots}</span></div>
           <p class="effect">${c.effect}</p>

@@ -73,7 +73,7 @@ export function createCodex() {
           ${icon(cur, open)}
           <h3>${open ? cur.name : U.codexLocked}</h3>
           ${open ? `
-            <p class="tag">${cur.field ? `${U.codexField} · ${fieldName[cur.field]}` : U.codexEnemies}</p>
+            <p class="tag">${cur.field ? `${U.codexField} ${fieldName[cur.field]}` : U.codexEnemies}</p>
             ${cur.science ? `<p class="sci">${cur.science}</p>` : ''}
             <h4>${U.codexEffect}</h4><p>${cur.effect}</p>` : ''}
         </article>
