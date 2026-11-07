@@ -229,6 +229,7 @@ const prologue = createPrologue({
 
 function setPause(on: boolean) {
   paused = on;
+  document.body.classList.toggle('paused', on); // 화면 위 연출 애니메이션도 함께 멈춤
   setPaused(on);
   on ? pause.open() : pause.close();
 }
@@ -419,7 +420,7 @@ function frame(now: number) {
     : world.choosing ? 1 : world.slowmo > 0 ? 1 - world.slowmo / balance.levelUp.slowmoTime : 0;
   defocus += (wantDefocus - defocus) * Math.min(1, realDt * 10);
   setDefocus(defocus < 0.01 ? 0 : defocus);
-  if ((phase === 'play' && !paused) || phase === 'demo') story.update(world, phase === 'play');
+  if ((phase === 'play' && !paused) || phase === 'demo') story.update(world, phase === 'play', realDt * 1000);
   pause.btn.hidden = !(phase === 'play' && !world.choosing && !world.over);
   tickFps(realDt);
   requestAnimationFrame(frame);

@@ -412,3 +412,6 @@ body.rec #dev, body.rec #dev-help, body.rec #fps { display: none !important; }
 /* 보스 처치: 하얀 섬광 */
 #flash { position: fixed; inset: 0; z-index: 4; pointer-events: none; background: var(--ink); opacity: 0; }
 #flash.on { animation: whiteflash 0.7s ease-out both; }
+
+/* 일시정지 중에는 게임 위 연출(막 자막, 말풍선, 진화, 보스 카드, 경고)의 애니메이션도 멈춘다 */
+body.paused #act, body.paused #act *, body.paused .officer, body.paused #evolve *, body.paused #bosscard *, body.paused #warn *, body.paused #allout, body.paused #allout *, body.paused #combo * { animation-play-state: paused !important; }

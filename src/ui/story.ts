@@ -37,32 +37,42 @@ export function createStory() {
   document.body.append(act, officer, warn, allOut, evolve, bossCard);
   let bossShown = false;
 
-  let lastAct = -1, seen = 0, notes = 0, evolved = 0, actTimer = 0, officerTimer = 0, evolveTimer = 0, busyUntil = 0;
+  let lastAct = -1, seen = 0, notes = 0, evolved = 0;
+  // 표시 시간은 update가 불릴 때만 줄어든다 (일시정지 중에는 멈춤). 단위: 밀리초
+  let actLeft = 0, officerLeft = 0, officerBusy = 0, evolveLeft = 0, bossLeft = 0, typed = 0, typingLine = '';
   const queue: string[] = [];
+  const officerText = officer.querySelector('p')!;
 
-  // 말풍선: 아래에서 통 튀어 오르고 글자가 빠르게 타자 치듯
-  let typing = 0;
+  // 말풍선: 아래에서 올라오고 글자가 빠르게 타자 치듯
   const showOfficer = (line: string) => {
-    const p = officer.querySelector('p')!;
-    p.textContent = '';
-    clearInterval(typing);
-    let n = 0;
-    typing = window.setInterval(() => { p.textContent = line.slice(0, ++n); if (n >= line.length) clearInterval(typing); }, 24);
+    typingLine = line;
+    typed = 0;
+    officerText.textContent = '';
     officer.classList.remove('on');
     void officer.offsetWidth; // 애니메이션 다시 시작
     officer.classList.add('on');
-    clearTimeout(officerTimer);
-    officerTimer = window.setTimeout(() => officer.classList.remove('on'), OFFICER_SHOW);
-    busyUntil = performance.now() + OFFICER_SHOW + 300;
+    officerLeft = OFFICER_SHOW;
+    officerBusy = OFFICER_SHOW + 300;
   };
 
   return {
     reset() {
-      lastAct = -1; seen = 0; notes = 0; evolved = 0; queue.length = 0; busyUntil = 0; bossShown = false;
+      lastAct = -1; seen = 0; notes = 0; evolved = 0; queue.length = 0; bossShown = false;
+      actLeft = officerLeft = officerBusy = evolveLeft = bossLeft = 0; typingLine = '';
       bossCard.classList.remove('on');
       act.classList.remove('on'); officer.classList.remove('on'); warn.hidden = true; allOut.hidden = true; evolve.hidden = true;
     },
-    update(w: World, sound = true) {
+    update(w: World, sound = true, dtMs = 16) {
+      const tick = (left: number, el: HTMLElement, off: () => void) => { if (left > 0 && (left -= dtMs) <= 0) off(); return left; };
+      actLeft = tick(actLeft, act, () => act.classList.remove('on'));
+      officerLeft = tick(officerLeft, officer, () => officer.classList.remove('on'));
+      officerBusy -= dtMs;
+      evolveLeft = tick(evolveLeft, evolve, () => { evolve.hidden = true; });
+      bossLeft = tick(bossLeft, bossCard, () => bossCard.classList.remove('on'));
+      if (typingLine && typed < typingLine.length) {
+        typed = Math.min(typingLine.length, typed + dtMs / 24);
+        officerText.textContent = typingLine.slice(0, Math.ceil(typed));
+      }
       if (w.act !== lastAct) {
         lastAct = w.act;
         const a = dialogue.acts.find((x) => x.id === balance.acts[w.act].id)!;
@@ -71,8 +81,7 @@ export function createStory() {
         act.classList.remove('on');
         void act.offsetWidth;
         act.classList.add('on');
-        clearTimeout(actTimer);
-        actTimer = window.setTimeout(() => act.classList.remove('on'), ACT_SHOW);
+        actLeft = ACT_SHOW;
       }
       // 처음 등장한 적마다 정보 장교 한 줄 (겹치면 차례로)
       while (seen < w.seen.length) {
@@ -84,20 +93,19 @@ export function createStory() {
         const line = officerLines[w.notes[notes++]];
         if (line) queue.push(line);
       }
-      if (queue.length && performance.now() > busyUntil) showOfficer(queue.shift()!);
+      if (queue.length && officerBusy <= 0) showOfficer(queue.shift()!);
       allOut.hidden = !(w.allOut && !w.over);
       if (w.boss.spawned && !bossShown) {
         bossShown = true;
         bossCard.classList.add('on');
-        setTimeout(() => bossCard.classList.remove('on'), 2400);
+        bossLeft = 2400;
       }
       if (w.evolveLog.length > evolved) {
         const ev = cardData.evolutions.find((x) => x.id === w.evolveLog[w.evolveLog.length - 1])!;
         evolved = w.evolveLog.length;
         evolve.innerHTML = `<div class="flash"></div><div class="text"><strong>${dialogue.ui.evolve}</strong><h3>${ev.name}</h3><p>${ev.science}</p></div>`;
         evolve.hidden = false;
-        clearTimeout(evolveTimer);
-        evolveTimer = window.setTimeout(() => { evolve.hidden = true; }, EVOLVE_SHOW);
+        evolveLeft = EVOLVE_SHOW;
       }
       // 보스 경고: 켜지는 순간 사이렌
       const warnOn = w.bossWarn > 0;

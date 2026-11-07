@@ -275,6 +275,14 @@ const tests = {
     check('edges: M toggles sound while paused', m0 !== m1);
     await press(page, 'KeyM', 'Escape');
     check('edges: resume after pause', await waitPhase(page, 'play', 2000));
+    // 일시정지 중에는 막 자막이 사라지지 않아야 한다 (표시 시간 4초)
+    await press(page, 'F1');
+    await sleep(500);
+    await press(page, 'Escape');
+    await sleep(5000);
+    const capOn = await page.evaluate(() => document.querySelector('#act').classList.contains('on'));
+    await press(page, 'Escape');
+    check('edges: captions wait while paused', capOn);
     // 보스 처치와 플레이어 사망이 같은 프레임
     await press(page, 'F3');
     await sleep(800);
