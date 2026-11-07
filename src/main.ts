@@ -20,6 +20,7 @@ import { createPause } from './ui/pause';
 import { createPrologue } from './ui/prologue';
 import { tickFps } from './ui/fps';
 import { unlock, startMusic, toggleMute, isMuted, setPaused, soundFrame, sfx } from './audio';
+import { installDev } from './dev';
 import balance from './data/balance.json';
 import dialogue from './data/dialogue.json';
 
@@ -124,6 +125,20 @@ function startDemo() {
   phase = 'demo';
 }
 
+const dev = installDev({
+  world: () => world,
+  restartFromTop() {
+    setPause(false);
+    result.hide();
+    ranking.hide();
+    toTitle();
+    phase = 'prologue';
+    title.showTitle(false);
+    prologue.play();
+  },
+  typing: () => phase === 'rank' && ranking.entering,
+});
+
 const keys = new Set<string>();
 addEventListener('keydown', (e) => {
   keys.add(e.code);
@@ -184,6 +199,7 @@ function frame(now: number) {
     updateWorld(world, dt, demoBot(world, dt));
     if (world.over) toTitle();
   } else if (phase === 'prologue') updateWorld(world, dt, { x: 0, y: 0 });
+  dev.frame(world);
   soundFrame(world, phase === 'play');
   view.sync(world, dt, now / 1000);
   setAct(world.act, dt);
