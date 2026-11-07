@@ -30,6 +30,10 @@
     { "id": "lung", "title": "2막 · 폐", "line": "감기 바이러스가 폐로 번지고 있다. 세포가 감염되기 전에 막아라!" },
     { "id": "lymph", "title": "3막 · 림프절", "line": "마지막 방어선, 림프절. 무언가 거대한 것이 다가온다…" }
   ],
+  "coldOpen": {
+    "tagline": "이 몸의 운명은 3분 안에 결정된다.",
+    "flashback": "72시간 전…"
+  },
   "prologue": {
     "clock": "기말고사 D-3 · 새벽 3:00",
     "night": "새내기는 사흘째 밤을 새우고 있다…",
@@ -46,6 +50,7 @@
   "ui": {
     "title": "Cell Survivor",
     "pressStart": "아무 키나 눌러 시작",
+    "tagline": "당신의 몸속, 3분의 전쟁",
     "levelUp": "레벨 업!",
     "newCard": "NEW",
     "resist": "내성!",

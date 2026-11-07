@@ -84,13 +84,15 @@ button { font: inherit; color: inherit; }
 /* ── 타이틀 ── */
 #title { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
   background: radial-gradient(circle at center, transparent 25%, rgba(5, 6, 10, 0.85) 75%); animation: fadein 0.4s both; }
-.logo { margin: 0; font: 400 clamp(56px, 10vw, 128px)/1 var(--display); letter-spacing: 0.01em; color: var(--ink); display: flex; align-items: baseline; }
+.logo { position: relative; z-index: 1; margin: 0; font: 400 clamp(56px, 10vw, 128px)/1 var(--display); letter-spacing: 0.01em; color: var(--ink); display: flex; align-items: baseline; }
 .cell-o { width: 0.66em; height: 0.66em; margin: 0 0.02em; overflow: visible; transform: translateY(0.02em); }
 .cell-o .mem { fill: rgba(82, 240, 138, 0.1); stroke: var(--gfp); stroke-width: 7; }
 .cell-o .nuc { fill: var(--dapi); transform-box: fill-box; transform-origin: center; animation: heartbeat 0.9375s infinite; }
-.logo.beat .nuc { animation: none; transform: scale(1.14); transition: transform 0.06s; }
+.logo.synced .nuc { animation: none; transition: transform 0.12s ease-out; }
+.logo.synced.beat .nuc { transform: scale(1.16); transition-duration: 0.04s; }
 @keyframes heartbeat { 0%, 100% { transform: scale(1); } 10% { transform: scale(1.14); } 22% { transform: scale(1); } 32% { transform: scale(1.08); } 46% { transform: scale(1); } }
-#title > p { margin: 0; display: flex; align-items: center; gap: 10px; font: 13px var(--mono); letter-spacing: 0.08em; color: var(--ink); }
+#title .tagline { position: relative; z-index: 1; margin: -8px 0 6px; font-size: clamp(15px, 1.6vw, 19px); letter-spacing: 0.12em; color: var(--dim); }
+#title .press { position: relative; z-index: 1; margin: 0; display: flex; align-items: center; gap: 10px; font: 13px var(--mono); letter-spacing: 0.08em; color: var(--ink); }
 .codex-btn { padding: 7px 14px; border-radius: 3px; font: 12px var(--mono); cursor: pointer; background: var(--panel); border: 1px solid var(--line-2); }
 .codex-btn:hover { border-color: var(--ink); }
 #title aside { position: absolute; right: 4vw; top: 50%; transform: translateY(-50%); width: 230px; padding: 12px 0 6px; font-size: 13px;
@@ -99,7 +101,7 @@ button { font: inherit; color: inherit; }
 
 #demo { position: fixed; top: 74px; left: 0; right: 0; z-index: 4; text-align: center; pointer-events: none; }
 #demo p { display: inline-flex; align-items: center; gap: 10px; margin: 0; padding: 7px 16px; font: 13px var(--mono); background: var(--panel); border: 1px solid var(--line-2); }
-#demo p::before, #title > p::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--gfp); box-shadow: 0 0 6px var(--gfp); animation: led 1.2s infinite; }
+#demo p::before, #title .press::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--gfp); box-shadow: 0 0 6px var(--gfp); animation: led 1.2s infinite; }
 
 /* ── 레벨업 카드: 표본 슬라이드 라벨 ── */
 #picker { position: fixed; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: rgba(4, 5, 8, 0.35); }
@@ -361,3 +363,37 @@ button { font: inherit; color: inherit; }
 #dev-help { position: fixed; left: 8px; bottom: 74px; z-index: 20; padding: 8px 10px; font: 12px/1.7 var(--mono); color: #eee; background: #111; border: 1px solid #444; }
 #dev-help kbd { display: inline-block; width: 3.2em; color: #ffd23a; border: 0; padding: 0; }
 body.rec #dev, body.rec #dev-help, body.rec #fps { display: none !important; }
+
+/* 타이틀: 어둠 속 보스 실루엣 (가끔 눈이 번쩍) */
+#title .silhouette { position: absolute; right: -22vh; top: 50%; width: 58vh; height: 58vh; transform: translateY(-50%); filter: blur(1.5px); opacity: 0.9;
+  animation: lurk 9s ease-in-out infinite alternate; pointer-events: none; }
+#title .silhouette polygon { fill: #07080b; stroke: rgba(176, 16, 28, 0.35); stroke-width: 0.6; }
+#title .silhouette .eyes { fill: #ff2a3a; opacity: 0; animation: glare 7s infinite; }
+@keyframes glare { 0%, 82%, 100% { opacity: 0; } 84% { opacity: 1; } 86% { opacity: 0.15; } 88%, 92% { opacity: 1; } 95% { opacity: 0; } }
+@keyframes lurk { from { transform: translate(0, -50%) rotate(-3deg); } to { transform: translate(-1.5vh, -49%) rotate(4deg); } }
+/* 시작: 렌즈가 돌아가며 초점이 맞는다 */
+#title .lensring { position: absolute; left: 50%; top: 50%; width: 120vmax; height: 120vmax; border-radius: 50%; transform: translate(-50%, -50%);
+  border: 34vmax solid #030305; box-shadow: inset 0 0 0 2px #1a1f24; opacity: 0; pointer-events: none;
+  background: repeating-conic-gradient(transparent 0 4deg, rgba(255, 255, 255, 0.025) 4deg 5deg); }
+#title.focusing .lensring { animation: lensturn 0.65s cubic-bezier(.6, 0, .3, 1) forwards; }
+#title.focusing > :not(.lensring) { transition: filter 0.6s, opacity 0.6s; filter: blur(6px); opacity: 0; }
+@keyframes lensturn { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(0) scale(1.4); } 60% { opacity: 1; } 100% { opacity: 1; transform: translate(-50%, -50%) rotate(70deg) scale(0.62); } }
+
+/* ── 콜드 오픈 ── */
+#coldopen { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
+#coldopen .bars { position: absolute; inset: 0; box-shadow: inset 0 11vh 0 #000, inset 0 -11vh 0 #000; }
+#coldopen .tagline { position: absolute; top: 44%; left: 0; right: 0; margin: 0; text-align: center; font: 400 clamp(30px, 4.6vw, 58px) var(--display); color: #fff;
+  letter-spacing: 0.02em; text-shadow: 0 2px 0 #000, 0 0 24px rgba(0, 0, 0, 0.9); opacity: 0; }
+#coldopen.is-stamp .tagline { animation: stampin 0.18s cubic-bezier(.2, .7, .3, 1) forwards; }
+@keyframes stampin { from { opacity: 0; transform: scale(1.35); letter-spacing: 0.2em; } to { opacity: 1; transform: scale(1); } }
+#coldopen .crack { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+#coldopen .crack polyline { fill: none; stroke: #fff; stroke-width: 0.25; vector-effect: non-scaling-stroke; stroke-dasharray: 200; stroke-dashoffset: 200; }
+#coldopen.is-crack .crack { opacity: 1; }
+#coldopen.is-crack .crack polyline { stroke-width: 2px; animation: crack 0.18s ease-out forwards; }
+@keyframes crack { to { stroke-dashoffset: 0; } }
+#coldopen .black { position: absolute; inset: 0; background: #000; opacity: 0; }
+#coldopen.is-cut .black { opacity: 1; }
+#coldopen.is-cut .crack, #coldopen.is-cut .tagline { display: none; }
+#coldopen .flashback { position: absolute; top: 46%; left: 0; right: 0; margin: 0; text-align: center; font: 600 clamp(16px, 2vw, 22px) var(--mono); letter-spacing: 0.3em; color: var(--ink); opacity: 0; }
+#coldopen.is-flashback .flashback { animation: fadein 0.8s ease forwards; opacity: 1; }
+#coldopen .skip { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font: 11px var(--mono); color: var(--dim); z-index: 1; }

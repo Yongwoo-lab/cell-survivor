@@ -21,7 +21,8 @@ export function createWorld() {
   return {
     time: 0,
     over: false,
-    player: { x: 0, y: 0, hp: P.hp, maxHp: P.hp, invuln: 0, xp: 0, level: 1, xpToNext: X.base },
+    // 첫 레벨업만 경험치를 줄여 손맛을 빨리 느끼게 한다 (firstLevelMul)
+    player: { x: 0, y: 0, hp: P.hp, maxHp: P.hp, invuln: 0, xp: 0, level: 1, xpToNext: Math.round(X.base * X.firstLevelMul) },
     // silent: 처치가 아니라 사라짐 (바이러스가 세포에 들어감) → 조각·처치 수 없음
     // squint: 맞았을 때 눈을 찡그리는 시간 (화면 연출용)
     enemies: new Pool(MAX_ENEMIES, ['x', 'y', 'hp', 'flash', 'id', 'kind', 'mark', 'macroCd', 'spawnCd', 'silent', 'squint'] as const),

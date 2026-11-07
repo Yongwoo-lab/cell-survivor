@@ -13,6 +13,9 @@ const MODES: Record<MusicMode, { bpm: number; chords: number[][]; cutoff: number
 const BEATS_PER_CHORD = 8, AHEAD = 0.25;
 
 let mode: MusicMode = 'calm', beat = 0, nextAt = 0, timer = 0;
+const beatListeners: (() => void)[] = [];
+// 심장 박동 저음이 실제로 울리는 순간에 알린다 (타이틀 로고 핵이 같이 뛴다)
+export const onBeat = (fn: () => void) => beatListeners.push(fn);
 
 export function setMusicMode(m: MusicMode) {
   if (m === mode) return;
@@ -47,6 +50,8 @@ function schedule(t: number) {
   const M = MODES[mode], out = buses().music, spb = 60 / M.bpm;
   // 심장 박동: 쿵-쿵
   tone(out, t, { f0: 62, f1: 34, dur: 0.22, vol: M.beat });
+  const wait = Math.max(0, (t - audio()!.currentTime) * 1000);
+  setTimeout(() => beatListeners.forEach((f) => f()), wait);
   tone(out, t, { f0: 56, f1: 32, dur: 0.18, vol: M.beat * 0.6, at: spb * 0.28 });
   const chord = M.chords[Math.floor(beat / BEATS_PER_CHORD) % M.chords.length];
   if (beat % BEATS_PER_CHORD === 0) pad(t, chord, spb * BEATS_PER_CHORD, M.cutoff);

@@ -99,6 +99,55 @@ export const sfx = {
     noise(o, t, { dur: 0.08, vol: 0.18, filter: 'bandpass', f0: 1800, q: 0.8 });
     return 0.14;
   }),
+  // 보스 포효: 거칠게 떨리는 저음 + 숨소리 같은 잡음
+  roar: () => voice('roar', (t, o) => {
+    const c = audio()!, osc = c.createOscillator(), lfo = c.createOscillator(), depth = c.createGain(), f = c.createBiquadFilter(), g = c.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(70, t);
+    osc.frequency.exponentialRampToValueAtTime(42, t + 1.5);
+    lfo.frequency.value = 23;
+    depth.gain.value = 14;
+    lfo.connect(depth).connect(osc.frequency);
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(900, t);
+    f.frequency.exponentialRampToValueAtTime(220, t + 1.5);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+    osc.connect(f).connect(g).connect(o);
+    osc.start(t); lfo.start(t); osc.stop(t + 1.7); lfo.stop(t + 1.7);
+    noise(o, t, { dur: 1.4, vol: 0.25, filter: 'bandpass', f0: 500, f1: 180, q: 0.7, attack: 0.1 });
+    return 1.7;
+  }),
+  // 글자가 찍히는 임팩트: 묵직한 저음 + 금속성 타격
+  impact: () => voice('impact', (t, o) => {
+    tone(o, t, { f0: 90, f1: 30, dur: 0.9, vol: 0.7, attack: 0.003 });
+    noise(o, t, { dur: 0.35, vol: 0.4, filter: 'lowpass', f0: 3000, f1: 200, attack: 0.002 });
+    tone(o, t, { type: 'square', f0: 1900, f1: 1200, dur: 0.12, vol: 0.05 });
+    return 0.9;
+  }),
+  // 저음 드롭: 아래로 떨어지는 사인파를 일그러뜨려 화면이 깨지는 느낌
+  drop: () => voice('drop', (t, o) => {
+    const c = audio()!, osc = c.createOscillator(), shaper = c.createWaveShaper(), g = c.createGain();
+    const curve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) { const x = (i / 255) * 2 - 1; curve[i] = Math.tanh(x * 3); }
+    shaper.curve = curve;
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(26, t + 1.5);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.55, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.7);
+    osc.connect(shaper).connect(g).connect(o);
+    osc.start(t); osc.stop(t + 1.8);
+    noise(o, t, { dur: 0.25, vol: 0.5, filter: 'highpass', f0: 2500, attack: 0.001 }); // 유리 깨지는 순간
+    return 1.8;
+  }),
+  // 현미경 초점 맞추기: 톱니 딸깍 세 번 + 짧게 차오르는 소리
+  focus: () => voice('focus', (t, o) => {
+    for (const at of [0, 0.07, 0.14]) noise(o, t, { dur: 0.025, vol: 0.18, filter: 'bandpass', f0: 2600, q: 5, at });
+    noise(o, t, { dur: 0.45, vol: 0.08, filter: 'bandpass', f0: 400, f1: 2400, q: 1.5, at: 0.1, attack: 0.2 });
+    return 0.6;
+  }),
   tick: () => voice('tick', (t, o) => {
     noise(o, t, { dur: 0.03, vol: 0.12, filter: 'bandpass', f0: 3800, q: 6 });
     tone(o, t, { f0: 2200, dur: 0.02, vol: 0.03 });

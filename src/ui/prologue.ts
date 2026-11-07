@@ -67,18 +67,18 @@ export function createPrologue(h: PrologueHooks) {
     const tick = window.setInterval(() => sfx.tick(), 1000);
     sfx.tick();
     try {
-      await wait(700);
-      await type(night, P.night, 70);
-      await wait(1800);
+      await wait(350);
+      await type(night, P.night, 38);
+      await wait(900);
       // ② 기침 + 흔들림 + 면역력 저하
       cough.textContent = P.cough;
       show(cough);
       root.classList.add('shake');
       sfx.cough();
-      await wait(500);
+      await wait(350);
       warning.textContent = P.warning;
       show(warning);
-      await wait(1900);
+      await wait(1100);
     } finally {
       clearInterval(tick);
     }
@@ -87,32 +87,32 @@ export function createPrologue(h: PrologueHooks) {
     // ③ 렌즈가 커지며 몸속으로, 카메라가 높은 곳에서 내려온다
     h.reveal();
     h.setLift(1);
-    await anim(1200, (k) => bg.style.setProperty('--lens', `${k * k * 150}vmax`));
+    await anim(900, (k) => bg.style.setProperty('--lens', `${k * k * 150}vmax`));
     bg.hidden = true;
-    const descent = anim(2400, (k) => h.setLift(1 - (1 - (1 - k) ** 3)));
-    await wait(300);
+    const descent = anim(1800, (k) => h.setLift(1 - (1 - (1 - k) ** 3)));
+    await wait(150);
     show(dive);
-    await type(dive, P.dive, 45);
+    await type(dive, P.dive, 26);
     await descent;
-    await wait(900);
+    await wait(500);
     show(dive, false);
     // ④ 정보 장교 세 줄 (키를 누르면 다음 줄)
     for (const text of P.officer) {
       show(officer, false);
       void officer.offsetWidth;
       show(officer);
-      await type(line, text, 26);
-      await Promise.race([wait(2600), new Promise<void>((r) => { next = r; })]);
+      await type(line, text, 17);
+      await Promise.race([wait(1750), new Promise<void>((r) => { next = r; })]);
       next = null;
     }
     show(officer, false);
     // ⑤ 몸을 지켜라! → 3, 2, 1
     await pop(P.call, 'big');
-    await wait(1300);
+    await wait(900);
     for (const n of ['3', '2', '1']) {
       await pop(n, 'count');
       sfx.countdown(n === '1');
-      await wait(700);
+      await wait(550);
     }
   }
 

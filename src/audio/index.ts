@@ -9,7 +9,7 @@ export { unlock, toggleMute, isMuted, setPaused } from './engine';
 import balance from '../data/balance.json';
 const TIERS = balance.juice.comboTiers;
 export const comboTier = (n: number) => TIERS.filter((t) => n >= t).length;
-export { startMusic } from './music';
+export { startMusic, onBeat } from './music';
 
 const BOSS = ENEMIES.findIndex((e) => e.id === 'superbug');
 let seenWorld: World | null = null, prevAct = -1, prevSlowmo = 0, prevEvolved = 0, prevCombo = 0;

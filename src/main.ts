@@ -7,7 +7,8 @@ import { createBot, BOTS } from './game/bot';
 import { score } from './game/result';
 import { createScene } from './render/scene';
 import { createView } from './render/meshes';
-import { followCamera, setLift } from './render/camera';
+import { followCamera, setLift, shake } from './render/camera';
+import { createColdOpen } from './ui/coldopen';
 import { createHud } from './ui/hud';
 import { createCardPicker } from './ui/cards';
 import { createDeck } from './ui/deck';
@@ -26,14 +27,16 @@ import { installDev } from './dev';
 import balance from './data/balance.json';
 import dialogue from './data/dialogue.json';
 
-// 타이틀 → 프롤로그 → 플레이 → 엔딩 문장 → 결과 카드 → 랭킹 → 타이틀
+// 타이틀 → 콜드 오픈 → 프롤로그 → 플레이 → 엔딩 문장 → 결과 카드 → 랭킹 → 타이틀
 // 타이틀에서 입력이 없으면 demo(자동 시연, 프롤로그 없음)
-type Phase = 'title' | 'prologue' | 'play' | 'ending' | 'result' | 'rank' | 'demo';
+type Phase = 'title' | 'cold' | 'prologue' | 'play' | 'ending' | 'result' | 'rank' | 'demo';
+const TITLE_SPEED = 0.35; // 타이틀 배경: 실제 게임 장면을 느리게
 let phase: Phase = 'title';
 let world: World = createWorld();
 let paused = false, idle = 0, demoPick = 0;
 let demoBot = createBot(BOTS.novice);
-let bossGlow = 0;
+let bossGlow = 0, coldScale = 1, coldGlow = 0;
+let titleBot = createBot(BOTS.novice);
 const BOSS_KIND = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 
 const { scene, camera, composer, setGlow, setAct, setDefocus } = createScene();
@@ -89,6 +92,64 @@ function previewWorld() {
   return w;
 }
 
+// 콜드 오픈 장면: 3막 보스전 한복판 (실제 판과는 별개인 세계)
+function coldWorld() {
+  const w = createWorld();
+  w.time = balance.boss.at + 1;
+  w.player.hp = w.player.maxHp = 1e9;
+  w.player.xpToNext = 1e9;
+  w.spawnAcc = w.spawnAcc.map(() => -1e9);
+  w.nextPill = Infinity;
+  w.fireCd = Infinity; // 슬로모션 순간까지 공격을 아껴 화면이 적으로 가득 차게
+  const kinds = ['coccus', 'bacillus', 'virus', 'resistantCoccus'].map(kindOf);
+  for (let n = 0; n < 280; n++) {
+    const a = Math.random() * Math.PI * 2, r = 3.2 + Math.random() * 15;
+    addEnemy(w, kinds[n % kinds.length], Math.cos(a) * r, Math.sin(a) * r);
+  }
+  const b = addEnemy(w, BOSS_KIND, 0, -6.5);
+  w.enemies.f.hp[b] = w.boss.maxHp = 1e6; // 장면용 보스는 쓰러지지 않는다
+  w.boss.spawned = true;
+  w.bossTime = 1;
+  return w;
+}
+
+const coldOpen = createColdOpen({
+  setup() {
+    world = coldWorld();
+    setLift(0.1);
+    followCamera(camera, view.player.position, 0, true);
+  },
+  roar: () => shake(1.4),
+  sweep() {
+    // 진화 공격: 대식세포 군단이 깨어나고, 가까운 적에 표식 → 고전 경로 연쇄 폭발
+    const w = world, e = w.enemies.f;
+    Object.assign(w.cards, { macrophage: 3, cytokine: 2, antibody: 3, complement: 2, nk: 2 });
+    w.evolved.classical = w.evolved.activatedMacrophage = true;
+    w.fireCd = 0;
+    const near = [...Array(w.enemies.count).keys()].filter((i) => e.kind[i] !== BOSS_KIND)
+      .sort((a, b) => Math.hypot(e.x[a], e.y[a]) - Math.hypot(e.x[b], e.y[b])).slice(0, 70);
+    for (const i of near) e.mark[i] = 4;
+    w.timers.complement = 0;
+    coldGlow = 0.55;
+    shake(0.9);
+  },
+  slow: (k) => { coldScale = k; },
+  done() {
+    phase = 'prologue';
+    prologue.play();
+  },
+  skipAll() {
+    setLift(0);
+    startGame();
+  },
+});
+
+function startColdOpen() {
+  phase = 'cold';
+  title.showDemo(false);
+  title.focusOut(() => { if (phase === 'cold') coldOpen.play(); });
+}
+
 const prologue = createPrologue({
   reveal() {
     world = previewWorld();
@@ -124,6 +185,8 @@ function toTitle() {
   story.reset();
   title.showDemo(false);
   world = createWorld();
+  titleBot = createBot(BOTS.novice);
+  setLift(0.3);
   phase = 'title';
   idle = 0;
   title.showTitle(true);
@@ -142,12 +205,8 @@ const dev = installDev({
   world: () => world,
   restartFromTop() {
     setPause(false);
-    result.hide();
-    ranking.hide();
     toTitle();
-    phase = 'prologue';
-    title.showTitle(false);
-    prologue.play();
+    startColdOpen();
   },
   typing: () => phase === 'rank' && ranking.entering,
 });
@@ -162,15 +221,14 @@ addEventListener('keydown', (e) => {
   if (codex.isOpen) return void codex.key(e);
   if (phase === 'rank') { if (ranking.key(e)) toTitle(); return; }
   if (phase === 'prologue') return prologue.key(e);
+  if (phase === 'cold') return coldOpen.key(e);
   if (paused) return pause.key(e);
   if (phase === 'play' && (e.code === 'Escape' || e.code === 'KeyP')) { if (canPause()) setPause(true); return; }
   if (e.code === 'KeyM') return mute();
   if (phase === 'demo') toTitle();
   else if (phase === 'title') {
     if (e.code === 'KeyD') return codex.open();
-    phase = 'prologue';
-    title.showTitle(false);
-    prologue.play();
+    startColdOpen();
   } else if (phase === 'result' && (e.code === 'Enter' || e.code === 'KeyR')) {
     result.hide();
     ranking.show(score(world));
@@ -181,7 +239,7 @@ addEventListener('keyup', (e) => keys.delete(e.code));
 addEventListener('blur', () => { keys.clear(); autoPause(); });
 const held = (...codes: string[]) => codes.some((c) => keys.has(c));
 
-title.showTitle(true);
+toTitle();
 view.sync(world, 0, 0);
 followCamera(camera, view.player.position, 0, true);
 
@@ -212,8 +270,21 @@ function frame(now: number) {
     updateWorld(world, dt, demoBot(world, dt));
     if (world.over) toTitle();
   } else if (phase === 'prologue') updateWorld(world, dt, { x: 0, y: 0 });
+  else if (phase === 'cold') {
+    updateWorld(world, dt * coldScale, { x: 0, y: 0 });
+    world.dmgNums.length = 0; // 장면을 깔끔하게: 피해 숫자·항원 조각 없음
+    world.gems.count = 0;
+  }
+  else if (phase === 'title' && !codex.isOpen) {
+    // 타이틀 배경: 초보 봇이 느리게 플레이 (무적). 너무 오래 흐르면 처음부터.
+    const tdt = dt * TITLE_SPEED;
+    if (world.choosing) selectCard(world, Math.floor(Math.random() * world.choosing.length));
+    updateWorld(world, tdt, titleBot(world, tdt));
+    world.player.hp = world.player.maxHp;
+    if (world.time > 110) { world = createWorld(); titleBot = createBot(BOTS.novice); }
+  }
   dev.frame(world);
-  soundFrame(world, phase === 'play');
+  soundFrame(world, phase === 'play' || phase === 'cold');
   view.sync(world, dt, now / 1000);
   setAct(world.act, dt);
   followCamera(camera, view.player.position, dt);
@@ -224,7 +295,9 @@ function frame(now: number) {
     world.slowmo > 0 ? 1 - world.slowmo / balance.levelUp.slowmoTime : 0,
     world.evoSlow > 0 ? world.evoSlow / balance.evolutions.slowmoTime : 0,
     bossGlow,
+    coldGlow,
   ));
+  coldGlow = Math.max(0, coldGlow - realDt * 0.9);
   composer.render();
   const inGame = phase === 'play' || phase === 'ending' || phase === 'demo';
   updateHud(inGame ? world : null);

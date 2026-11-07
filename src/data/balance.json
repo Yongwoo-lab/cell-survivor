@@ -18,7 +18,8 @@
   },
   "xp": {
     "base": 5,
-    "growth": 1.22
+    "growth": 1.22,
+    "firstLevelMul": 0.5
   },
   "spawn": {
     "distance": 24,
