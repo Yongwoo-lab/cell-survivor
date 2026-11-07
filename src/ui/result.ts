@@ -61,6 +61,9 @@ export function createResult() {
         </div>
         <p class="back">${U.next}</p>`;
         card.hidden = false;
+        // 화면을 넘치면 카드 설명을 뒤에서부터 뺀다 (최대 2개였던 것을 1개, 0개로)
+        const rc = card.querySelector<HTMLElement>('.rc')!, items = [...rc.querySelectorAll('li')];
+        while (rc.scrollHeight > rc.clientHeight + 1 && items.length) items.pop()!.remove();
         // 숫자가 올라가며 세어진다
         const t0 = performance.now(), targets = [w.time, kills, w.player.level];
         const cells = [...card.querySelectorAll<HTMLElement>('.stats b')];

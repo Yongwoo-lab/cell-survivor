@@ -260,10 +260,11 @@ button { font: inherit; color: inherit; }
 
 /* ── 결과 카드 (세로 9:16 실험 기록지) ── */
 #result { position: fixed; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: var(--bg); animation: fadein 0.4s both; }
-.rc { box-sizing: border-box; height: min(calc(100vh - 60px), 860px); aspect-ratio: 9 / 16; padding: 2.6em 2.3em; display: flex; flex-direction: column; gap: 1.2vh;
-  overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-top: 2px solid var(--ally); border-radius: var(--r); font-size: min(1.55vh, 15px); animation: slideup 0.4s var(--ease) both; }
+/* 높이는 내용만큼 (가운데가 비지 않게), 화면을 넘으면 result.ts가 설명을 줄인다 */
+.rc { box-sizing: border-box; width: min(460px, 92vw); max-height: calc(100vh - 56px); padding: 2.2em 2.3em; display: flex; flex-direction: column; gap: 1.1em;
+  overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-top: 2px solid var(--ally); border-radius: var(--r); font-size: min(1.75vh, 15px); animation: slideup 0.4s var(--ease) both; }
 #result.lost .rc { border-top-color: var(--danger); }
-.rc h1 { margin: 0.4em 0 0; font: 700 2em/1.25 var(--sans); color: var(--ink); }
+.rc h1 { margin: 0; font: 700 2em/1.25 var(--sans); color: var(--ink); }
 .rc h2 { margin: 0; font: 400 1.05em var(--serif); color: var(--ally); }
 .rc .desc { margin: 0; line-height: 1.65; }
 .rc .courses { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -279,7 +280,7 @@ button { font: inherit; color: inherit; }
 .rc .chips span { padding: 0.15em 0.6em; font-size: 0.9em; border: 1px solid var(--line); border-radius: var(--r); white-space: nowrap; }
 .rc .chips i { font: normal 500 0.85em var(--mono); color: var(--dim); }
 .rc .chips span.evo { border-color: var(--gold); color: var(--gold); }
-.rc ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.8em; flex: 1; min-height: 0; overflow: hidden; }
+.rc ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.8em; }
 .rc li b { display: block; font-size: 0.95em; font-weight: 700; color: var(--ink); }
 .rc li span { font-size: 0.9em; line-height: 1.55; color: var(--dim); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rc .abx { margin: 0; font-size: 0.9em; line-height: 1.5; padding: 0.6em 0.8em; border: 1px solid var(--line); border-radius: var(--r); }

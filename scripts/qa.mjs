@@ -427,6 +427,66 @@ const tests = {
     await ctx.close();
   },
 
+  // 결과 화면·일시정지 화면: 모든 글자가 패널 안, 화면 안에 있고 스크롤이 없어야 한다
+  async panels() {
+    const textOutside = (page, panelSel) => page.evaluate((ps) => {
+      const panel = document.querySelector(ps);
+      if (!panel) return ['no panel'];
+      const P = panel.getBoundingClientRect(), bad = [];
+      if (panel.scrollHeight > panel.clientHeight + 1) bad.push(`scroll ${panel.scrollHeight}>${panel.clientHeight}`);
+      for (const el of [panel, ...panel.querySelectorAll('*')]) {
+        if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+        const r = el.getBoundingClientRect();
+        if (!r.width) continue;
+        const out = r.left < P.left - 1 || r.top < P.top - 1 || r.right > P.right + 1 || r.bottom > P.bottom + 1
+          || r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight;
+        if (out) bad.push(`${el.tagName.toLowerCase()}${el.className ? '.' + el.className : ''} "${el.textContent.trim().slice(0, 12)}"`);
+      }
+      return bad;
+    }, panelSel);
+    for (const [width, height] of [[1366, 768], [1920, 1080]]) {
+      const tag = `${width}x${height}`;
+      const { page, ctx } = await open(`panels ${tag}`, { size: { width, height } });
+      await startPlay(page);
+      // 가장 긴 경우: 카드 8장 모두 최대 단계, 항생제 여러 번
+      await page.evaluate(() => {
+        const w = window.__qa.world();
+        for (const id of ['macrophage', 'net', 'antibody', 'complement', 'cytokine', 'nk', 'memory', 'fever']) w.cards[id] = 3;
+        Object.assign(w.result, { immuno: 4, cell: 4, molecular: 3, biochem: 3, genetics: 3, physio: 3 });
+        w.antibioticUses = 3; w.time = 100;
+      });
+      await sleep(300);
+      await press(page, 'Escape');
+      await waitPhase(page, 'paused', 2000);
+      await sleep(300);
+      const pz = await textOutside(page, '#pause .pz');
+      check(`panels: pause text inside panel ${tag}`, !pz.length, pz.slice(0, 4).join(', '));
+      await press(page, 'Escape');
+      await waitPhase(page, 'play', 2000);
+      await page.evaluate(() => { const p = window.__qa.world().player; p.hp = 0; });
+      await waitVisible(page, '#result .rc', 8000);
+      await sleep(600);
+      const rc = await textOutside(page, '#result .rc');
+      const info = await page.evaluate(() => { const r = document.querySelector('#result .rc'); const b = r.getBoundingClientRect();
+        return `top ${Math.round(b.top)} bottom gap ${Math.round(innerHeight - b.bottom)}, notes ${r.querySelectorAll('li').length}`; });
+      check(`panels: result text inside panel ${tag}`, !rc.length, rc.length ? rc.slice(0, 4).join(', ') : info);
+      await ctx.close();
+    }
+  },
+
+  // CSS 커스텀 속성이 @property로 두 번 등록되지 않았는지
+  async cssprops() {
+    const { page, ctx } = await open('cssprops');
+    const dup = await page.evaluate(() => {
+      const seen = {};
+      const walk = (rules) => { for (const r of rules) { if (r instanceof CSSPropertyRule) seen[r.name] = (seen[r.name] ?? 0) + 1; if (r.cssRules) walk(r.cssRules); } };
+      for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch { /* 다른 출처 */ } }
+      return { names: Object.keys(seen), dup: Object.entries(seen).filter(([, n]) => n > 1).map(([k]) => k) };
+    });
+    check('cssprops: no @property registered twice', !dup.dup.length, `${dup.names.join(' ')}${dup.dup.length ? ' dup ' + dup.dup.join(' ') : ''}`);
+    await ctx.close();
+  },
+
   async storage() {
     for (const [label, init] of [['empty', () => localStorage.clear()], ['corrupt', () => {
       localStorage.setItem('cell-survivor-ranking', '{broken');
