@@ -1,0 +1,6 @@
+{
+  "_comment": "public/music/<곡>.mp3 가 있으면 그 파일, 없으면 합성 곡. 곡: title, act1, act2, act3, boss, win, lose. 파일을 넣거나 빼면 npm run dev를 다시 시작한다.",
+  "crossfade": 1.5,
+  "fileLevel": 0.8,
+  "loop": ["title", "act1", "act2", "act3", "boss"]
+}

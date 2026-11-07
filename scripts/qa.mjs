@@ -148,11 +148,14 @@ const tests = {
   // 전체 흐름 (승리): 건너뛰기 없이 콜드 오픈·프롤로그 → 1~3막 → 보스 → 승리 → 결과 → 랭킹 → 타이틀
   async flow() {
     const { page, ctx } = await open('flow');
+    const tracks = [];
+    const track = async () => { await sleep(150); tracks.push(await page.evaluate(() => window.__qa.info().track)); };
     check('flow: title shows logo and menu', (await visible(page, '#title .logo')) && (await visible(page, '#title .menu button')));
     await press(page, 'Enter');
     check('flow: Enter starts cold open', (await waitPhase(page, 'cold', 2000)) && (await waitVisible(page, '#coldopen', 3000)));
     check('flow: cold open hands over to prologue', (await waitPhase(page, 'prologue', 10000)) && (await visible(page, '#prologue')));
     check('flow: prologue ends in play with HUD', (await waitPhase(page, 'play', 22000)) && (await waitVisible(page, '#hud')));
+    await track();
     await press(page, 'F7', 'F4');
     check('flow: level-up shows 3 cards', (await waitVisible(page, '#picker .card', 3000)) && (await page.locator('#picker .card').count()) === 3);
     await press(page, 'Digit1');
@@ -160,16 +163,22 @@ const tests = {
     check('flow: picking closes picker and fills deck', !(await visible(page, '#picker')) && (await page.locator('#deck .slot').count()) >= 1);
     await press(page, 'F1');
     check('flow: act 2 caption', await page.waitForFunction(() => document.querySelector('#act h2')?.textContent.includes('2막'), null, { timeout: 3000 }).then(() => true, () => false));
+    await track();
     await press(page, 'F2');
     check('flow: act 3 caption', await page.waitForFunction(() => document.querySelector('#act h2')?.textContent.includes('3막'), null, { timeout: 3000 }).then(() => true, () => false));
+    await track();
     await press(page, 'F3');
     check('flow: boss card and boss bar', (await page.waitForFunction(() => document.querySelector('#bosscard')?.classList.contains('on'), null, { timeout: 3000 }).then(() => true, () => false)) && (await waitVisible(page, '#hud .boss')));
+    await track();
     await sleep(2000);
     await bossHp(page, 0.01);
     check('flow: boss kill enters victory', await waitPhase(page, 'victory', 5000));
     check('flow: white flash', await page.waitForFunction(() => document.querySelector('#flash')?.classList.contains('on'), null, { timeout: 3000 }).then(() => true, () => false));
     check('flow: ending then result (won)', (await waitVisible(page, '#ending', 6000)) && (await waitVisible(page, '#result.won', 6000)));
+    await track();
     check('flow: result → ranking → title', await finishRanking(page));
+    await track();
+    check('flow: music changes per act', tracks.join() === 'act1,act2,act3,boss,win,title', tracks.join());
     await ctx.close();
   },
 

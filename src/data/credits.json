@@ -1,7 +1,70 @@
 [
   {
     "type": "sound",
-    "source": "Web Audio로 자체 합성"
+    "source": "효과음과 합성 브금(파일이 없는 곡)은 Web Audio로 자체 합성"
+  },
+  {
+    "type": "music",
+    "track": "title",
+    "file": "public/music/title.mp3",
+    "title": "",
+    "author": "",
+    "license": "",
+    "source": ""
+  },
+  {
+    "type": "music",
+    "track": "act1",
+    "file": "public/music/act1.mp3",
+    "title": "",
+    "author": "",
+    "license": "",
+    "source": ""
+  },
+  {
+    "type": "music",
+    "track": "act2",
+    "file": "public/music/act2.mp3",
+    "title": "",
+    "author": "",
+    "license": "",
+    "source": ""
+  },
+  {
+    "type": "music",
+    "track": "act3",
+    "file": "public/music/act3.mp3",
+    "title": "",
+    "author": "",
+    "license": "",
+    "source": ""
+  },
+  {
+    "type": "music",
+    "track": "boss",
+    "file": "public/music/boss.mp3",
+    "title": "",
+    "author": "",
+    "license": "",
+    "source": ""
+  },
+  {
+    "type": "music",
+    "track": "win",
+    "file": "public/music/win.mp3",
+    "title": "",
+    "author": "",
+    "license": "",
+    "source": ""
+  },
+  {
+    "type": "music",
+    "track": "lose",
+    "file": "public/music/lose.mp3",
+    "title": "",
+    "author": "",
+    "license": "",
+    "source": ""
   },
   {
     "type": "font",

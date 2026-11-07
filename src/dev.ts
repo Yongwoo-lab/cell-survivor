@@ -7,7 +7,7 @@ import { EVOLUTIONS } from './game/cards';
 export interface DevHooks {
   world(): World;
   phase(): string;
-  info(): Record<string, number>;
+  info(): Record<string, number | string | null>;
   restartFromTop(): void; // 콜드 오픈부터 다시
   typing(): boolean; // 이름 입력 중이면 H를 가로채지 않는다
 }

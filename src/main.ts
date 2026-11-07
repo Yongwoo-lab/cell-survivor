@@ -24,7 +24,7 @@ import { createCombo } from './ui/combo';
 import { createPause } from './ui/pause';
 import { createPrologue } from './ui/prologue';
 import { tickFps } from './ui/fps';
-import { unlock, startMusic, toggleMute, isMuted, setPaused, setMuted, soundFrame, sfx, onBeat, duckMusic } from './audio';
+import { unlock, startMusic, toggleMute, isMuted, setPaused, setMuted, soundFrame, sfx, onBeat, duckMusic, musicTrack } from './audio';
 import * as THREE from 'three';
 import { installDev } from './dev';
 import balance from './data/balance.json';
@@ -274,7 +274,7 @@ function startDemo() {
 const dev = installDev({
   world: () => world,
   phase: () => (paused ? 'paused' : phase),
-  info: () => ({ ...renderer.info.memory, programs: renderer.info.programs?.length ?? 0, ...view.debug(), enemies: world.enemies.count }),
+  info: () => ({ ...renderer.info.memory, programs: renderer.info.programs?.length ?? 0, ...view.debug(), enemies: world.enemies.count, track: musicTrack() }),
   restartFromTop() {
     setPause(false);
     toTitle();
@@ -368,7 +368,7 @@ function frame(now: number) {
   if (!stepped) clearEvents(world); // 세계가 안 움직인 프레임: 지난 이벤트로 연출·소리가 반복되지 않게
   stepped = false;
   dev.frame(world);
-  soundFrame(world, phase === 'play' || phase === 'cold');
+  soundFrame(world, phase === 'play' || phase === 'cold', titleView || phase === 'demo');
   const frozen = phase === 'play' && hitstop > 0;
   if (phase === 'victory') {
     const prev = victoryT;
