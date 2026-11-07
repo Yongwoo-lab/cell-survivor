@@ -3,7 +3,7 @@ let ctx: AudioContext | null = null;
 let master: GainNode, sfxBus: GainNode, musicBus: GainNode, noiseBuf: AudioBuffer;
 let muted = false;
 const MAX_SAME = 4;
-const MUSIC_LEVEL = 0.5;
+const MUSIC_LEVEL = 0.45, SFX_LEVEL = 0.7;
 const active: Record<string, number> = {};
 
 export const audio = () => ctx;
@@ -19,9 +19,16 @@ export function unlock(onStart: () => void) {
   ctx = new AudioContext();
   master = ctx.createGain();
   master.gain.value = muted ? 0 : 1;
-  master.connect(ctx.destination);
+  // 마스터 리미터: 소리가 한꺼번에 몰려도 깨지지 않게
+  const limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.value = -8;
+  limiter.knee.value = 0;
+  limiter.ratio.value = 20;
+  limiter.attack.value = 0.002;
+  limiter.release.value = 0.12;
+  master.connect(limiter).connect(ctx.destination);
   sfxBus = ctx.createGain();
-  sfxBus.gain.value = 0.8;
+  sfxBus.gain.value = SFX_LEVEL;
   sfxBus.connect(master);
   musicBus = ctx.createGain();
   musicBus.gain.value = MUSIC_LEVEL;
@@ -106,3 +113,6 @@ export function noise(out: AudioNode, t: number, o: NoiseOpts) {
 }
 
 export const midiHz = (m: number) => 440 * 2 ** ((m - 69) / 12);
+// 자주 나는 소리: 매번 음높이와 볼륨을 조금씩 달리해 기계적으로 들리지 않게
+export const varyPitch = (f: number, cents = 60) => f * 2 ** (((Math.random() * 2 - 1) * cents) / 1200);
+export const varyVol = (v: number, spread = 0.25) => v * (1 - Math.random() * spread);
