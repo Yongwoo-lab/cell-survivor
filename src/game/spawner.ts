@@ -16,7 +16,7 @@ export function addEnemy(w: World, kind: number, x: number, y: number) {
   e.x[i] = x; e.y[i] = y;
   e.kind[i] = kind;
   e.hp[i] = def.hp;
-  e.flash[i] = e.mark[i] = e.macroCd[i] = e.silent[i] = 0;
+  e.flash[i] = e.mark[i] = e.macroCd[i] = e.silent[i] = e.squint[i] = 0;
   e.spawnCd[i] = def.spawnVirusEvery ?? 0;
   e.id[i] = w.nextId++;
   if (!w.seen.includes(kind)) w.seen.push(kind);
@@ -31,7 +31,9 @@ function ring(w: World, min: number, max: number) {
 export function updateSpawner(w: World, dt: number) {
   for (const t of TIMELINE) {
     if (w.time < t.from || w.time >= t.to) continue;
-    w.spawnAcc[t.k] += (t.startPerSec + t.growthPerSec * (w.time - t.from)) * dt;
+    // 시작 직후 introSlowSeconds초는 등장 속도를 줄여 숨 돌릴 틈을 준다
+    const slow = w.time < S.introSlowSeconds ? S.introSlowMul : 1;
+    w.spawnAcc[t.k] += (t.startPerSec + t.growthPerSec * (w.time - t.from)) * dt * slow;
     while (w.spawnAcc[t.k] >= 1) {
       w.spawnAcc[t.k]--;
       if (w.enemies.count >= S.maxEnemies) continue;

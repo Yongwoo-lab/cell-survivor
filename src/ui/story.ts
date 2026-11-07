@@ -15,6 +15,7 @@ export function createStory() {
   act.innerHTML = '<h2></h2><p></p>';
   const officer = document.createElement('div');
   officer.id = 'officer';
+  officer.className = 'officer';
   officer.innerHTML = `<div class="icon"></div><div class="bubble"><b>${dialogue.officerName}</b><p></p></div>`;
   const warn = document.createElement('div');
   warn.id = 'warn';
@@ -24,6 +25,7 @@ export function createStory() {
   const allOut = document.createElement('div');
   allOut.id = 'allout';
   allOut.hidden = true;
+  allOut.innerHTML = `<strong>${dialogue.ui.allOut}</strong>`;
   // 진화: 금빛 플래시 + "진화!" + science
   const evolve = document.createElement('div');
   evolve.id = 'evolve';
@@ -33,8 +35,14 @@ export function createStory() {
   let lastAct = -1, seen = 0, notes = 0, evolved = 0, actTimer = 0, officerTimer = 0, evolveTimer = 0, busyUntil = 0;
   const queue: string[] = [];
 
+  // 말풍선: 아래에서 통 튀어 오르고 글자가 빠르게 타자 치듯
+  let typing = 0;
   const showOfficer = (line: string) => {
-    officer.querySelector('p')!.textContent = line;
+    const p = officer.querySelector('p')!;
+    p.textContent = '';
+    clearInterval(typing);
+    let n = 0;
+    typing = window.setInterval(() => { p.textContent = line.slice(0, ++n); if (n >= line.length) clearInterval(typing); }, 24);
     officer.classList.remove('on');
     void officer.offsetWidth; // 애니메이션 다시 시작
     officer.classList.add('on');

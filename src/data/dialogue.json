@@ -30,6 +30,19 @@
     { "id": "lung", "title": "2막 · 폐", "line": "감기 바이러스가 폐로 번지고 있다. 세포가 감염되기 전에 막아라!" },
     { "id": "lymph", "title": "3막 · 림프절", "line": "마지막 방어선, 림프절. 무언가 거대한 것이 다가온다…" }
   ],
+  "prologue": {
+    "clock": "기말고사 D-3 · 새벽 3:00",
+    "night": "새내기는 사흘째 밤을 새우고 있다…",
+    "cough": "콜록!",
+    "warning": "면역력 저하",
+    "dive": "그 순간, 상처 틈으로 세균이 몸속에 들어왔다.",
+    "officer": [
+      "반갑다, 신입! 나는 정보 장교 수지상세포. 적의 정보를 모아 너에게 알려 주지.",
+      "너는 백혈구, 이 몸의 방어 부대다. 방향키로 움직이면 공격은 자동으로 나간다.",
+      "적을 쓰러뜨리면 나오는 항원 조각을 모아 강해져라!"
+    ],
+    "call": "몸을 지켜라!"
+  },
   "ui": {
     "title": "Cell Survivor",
     "pressStart": "아무 키나 눌러 시작",
@@ -65,6 +78,16 @@
     "codexField": "분야",
     "codexEffect": "게임 속 효과",
     "codexRequires": "진화 조건",
-    "codexStats": "체력 {hp} · 속도 {speed} · 피해 {damage}"
+    "codexStats": "체력 {hp} · 속도 {speed} · 피해 {damage}",
+    "skip": "Space 건너뛰기",
+    "combo": "COMBO!",
+    "allOut": "총공격!",
+    "pause": "일시정지",
+    "resume": "계속하기",
+    "restart": "다시 시작",
+    "soundOn": "소리 켜기",
+    "soundOff": "소리 끄기",
+    "toTitle": "타이틀로",
+    "pauseHint": "Esc · P"
   }
 }

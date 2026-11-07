@@ -74,7 +74,9 @@
         "startPerSec": 0.35,
         "growthPerSec": 0.008
       }
-    ]
+    ],
+    "introSlowSeconds": 10,
+    "introSlowMul": 0.5
   },
   "acts": [
     {
@@ -188,5 +190,14 @@
     "bossReductionMax": 0.6,
     "bossHpPerUse": 0.1,
     "popupInterval": 0.3
+  },
+  "juice": {
+    "comboWindow": 1.5,
+    "comboTiers": [
+      10,
+      25,
+      50
+    ],
+    "squintTime": 0.2
   }
 }

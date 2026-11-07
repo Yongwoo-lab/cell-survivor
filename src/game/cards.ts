@@ -102,7 +102,12 @@ export function damageEnemy(w: World, i: number, amount: number, src: Source, fl
   // 항생제를 쓸수록 슈퍼버그의 기본 피해 감소가 쌓인다
   if (kind === BOSS) total *= 1 - Math.min(A.bossReductionMax, w.antibioticUses * A.bossReductionPerUse);
   e.hp[i] -= total;
-  if (flash) { e.flash[i] = FLASH_TIME; w.fx.hit++; }
+  if (flash) {
+    e.flash[i] = FLASH_TIME;
+    e.squint[i] = balance.juice.squintTime;
+    w.fx.hit++;
+    if (w.dmgNums.length < 60) w.dmgNums.push({ x: e.x[i], y: e.y[i], v: total });
+  }
 }
 
 export function fireShot(w: World, kind: number, tx: number, ty: number, speed: number) {

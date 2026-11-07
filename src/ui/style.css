@@ -16,11 +16,17 @@ canvas { display: block; }
 #picker { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
   background: radial-gradient(ellipse at center, rgba(4, 40, 44, 0.55), rgba(8, 2, 20, 0.85)); font-family: system-ui, sans-serif; color: #e6ffff; }
 #picker[hidden] { display: none; }
-#picker h2 { margin: 0; font-size: 30px; letter-spacing: 0.08em; color: #bffcff; text-shadow: 0 0 18px #3ff2e6; }
+#picker h2 { animation: popin 0.6s cubic-bezier(.2, .9, .3, 1.2) both; margin: 0; font-size: 30px; letter-spacing: 0.08em; color: #bffcff; text-shadow: 0 0 18px #3ff2e6; }
 .hand { display: flex; gap: 20px; perspective: 1200px; }
 .card { position: relative; width: 230px; height: 320px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer;
   transform-style: preserve-3d; animation: flip 0.55s cubic-bezier(.2, .8, .3, 1.2) var(--delay) both; transition: translate 0.15s; }
-.card:hover { translate: 0 -8px; }
+.card:hover { translate: 0 -16px; rotate: -2.5deg; scale: 1.04; }
+.card { transition: translate 0.2s, rotate 0.2s, scale 0.2s; }
+.card.picked { animation: flyaway 0.45s cubic-bezier(.5, 0, .8, .4) forwards; pointer-events: none; }
+.card.picked .face { border-color: #fff; box-shadow: 0 0 60px #fff, 0 0 30px var(--gold, #ffd36b); filter: brightness(1.6); }
+.card.dismiss { animation: dismiss 0.3s ease-in forwards; pointer-events: none; }
+@keyframes flyaway { 0% { transform: scale(1); } 30% { transform: scale(1.12); opacity: 1; } 100% { transform: translateY(-70vh) scale(0.4) rotate(14deg); opacity: 0; } }
+@keyframes dismiss { to { transform: scale(0.85); opacity: 0; } }
 @keyframes flip { from { transform: rotateY(180deg) scale(0.85); } to { transform: rotateY(0) scale(1); } }
 .face, .back { position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden; box-sizing: border-box; }
 .face { display: flex; flex-direction: column; gap: 10px; padding: 18px 16px 14px; text-align: left;
@@ -53,35 +59,28 @@ body { font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
 #title p { margin: 0; font-size: 18px; opacity: 0.8; animation: blink 1.4s ease-in-out infinite; }
 @keyframes blink { 50% { opacity: 0.25; } }
 
-/* 인트로: 현미경 접안렌즈처럼 동그란 시야 */
-#intro { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
-  background: radial-gradient(circle at center, rgba(4, 30, 34, 0.55) 0, rgba(4, 30, 34, 0.55) 34vmin, #000 46vmin); }
-#intro .lines { max-width: min(760px, 86vw); text-align: center; }
-#intro .lines p { margin: 0 0 14px; min-height: 1.5em; font-size: clamp(18px, 2.4vw, 26px); line-height: 1.5; }
-#intro .lines p.typing::after { content: '▍'; color: #3ff2e6; animation: blink 0.6s steps(1) infinite; }
-#intro .call { font-size: clamp(40px, 7vw, 84px); font-weight: 800; color: #fff; opacity: 0; transform: scale(1.6);
-  transition: opacity 0.35s, transform 0.45s cubic-bezier(.2, .9, .3, 1.3); text-shadow: 0 0 30px #3ff2e6; }
-#intro .call.on { opacity: 1; transform: scale(1); }
 
 /* 막 제목: 화면이 살짝 어두워지며 가운데 */
 #act { position: fixed; inset: 0; z-index: 1; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; opacity: 0;
   background: rgba(0, 0, 0, 0.35); }
 #act.on { animation: act 2.5s ease-in-out both; }
 @keyframes act { 0% { opacity: 0; } 15%, 80% { opacity: 1; } 100% { opacity: 0; } }
+#act.on h2 { animation: popin 0.7s cubic-bezier(.2, .9, .3, 1.2) both; }
 #act h2 { margin: 0; font-size: clamp(32px, 5vw, 56px); letter-spacing: 0.08em; text-shadow: 0 0 20px rgba(150, 240, 255, 0.7); }
 #act p { margin: 0; font-size: clamp(15px, 2vw, 20px); opacity: 0.9; max-width: 80vw; text-align: center; }
 
 /* 정보 장교 말풍선 */
-#officer { position: fixed; left: 50%; bottom: 28px; z-index: 2; display: flex; align-items: center; gap: 12px; pointer-events: none;
+.officer { position: fixed; left: 50%; bottom: 28px; z-index: 2; display: flex; align-items: center; gap: 12px; pointer-events: none;
   opacity: 0; transform: translate(-50%, 20px); transition: opacity 0.3s, transform 0.3s; }
-#officer.on { opacity: 1; transform: translate(-50%, 0); }
-#officer .icon { width: 56px; height: 56px; flex: none; border-radius: 50%;
+.officer.on { opacity: 1; transform: translate(-50%, 0); animation: bubbleup 0.5s cubic-bezier(.2, .9, .3, 1.4) both; }
+@keyframes bubbleup { 0% { transform: translate(-50%, 60px) scale(0.8); } 70% { transform: translate(-50%, -8px) scale(1.03); } 100% { transform: translate(-50%, 0) scale(1); } }
+.officer .icon { width: 56px; height: 56px; flex: none; border-radius: 50%;
   background: radial-gradient(circle at 50% 50%, #e8d8ff 0 18%, rgba(170, 140, 255, 0.55) 30%, rgba(80, 220, 210, 0.25) 62%, transparent 70%);
   box-shadow: 0 0 18px rgba(63, 242, 230, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.4); border: 2px solid rgba(160, 255, 245, 0.7); }
-#officer .bubble { position: relative; max-width: min(520px, 70vw); padding: 10px 16px; border-radius: 16px; background: rgba(6, 30, 36, 0.9); border: 1px solid rgba(120, 245, 235, 0.5); }
-#officer .bubble::before { content: ''; position: absolute; left: -8px; top: 50%; margin-top: -7px; border: 7px solid transparent; border-right-color: rgba(120, 245, 235, 0.5); border-left: 0; }
-#officer b { font-size: 12px; color: #9ffff0; }
-#officer p { margin: 2px 0 0; font-size: 16px; }
+.officer .bubble { position: relative; max-width: min(520px, 70vw); padding: 10px 16px; border-radius: 16px; background: rgba(6, 30, 36, 0.9); border: 1px solid rgba(120, 245, 235, 0.5); }
+.officer .bubble::before { content: ''; position: absolute; left: -8px; top: 50%; margin-top: -7px; border: 7px solid transparent; border-right-color: rgba(120, 245, 235, 0.5); border-left: 0; }
+.officer b { font-size: 12px; color: #9ffff0; }
+.officer p { margin: 2px 0 0; font-size: 16px; }
 
 /* 보스 경고: 가장자리 빨간 깜빡임 */
 #warn { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
@@ -173,7 +172,7 @@ body { font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
 #evolve .flash { position: absolute; inset: 0; background: radial-gradient(circle, rgba(255, 240, 180, 0.95), rgba(255, 200, 80, 0.5) 50%, transparent 80%); animation: goldflash 0.9s ease-out both; }
 @keyframes goldflash { from { opacity: 1; } to { opacity: 0; } }
 #evolve .text { position: absolute; top: 30%; left: 0; right: 0; text-align: center; animation: act 2.5s ease-in-out both; }
-#evolve strong { display: block; font-size: clamp(44px, 7vw, 80px); color: #fff3c4; text-shadow: 0 0 30px var(--gold), 0 0 60px #ff9a20; }
+#evolve strong { animation: popin 0.7s cubic-bezier(.2, .9, .3, 1.2) both; display: block; font-size: clamp(44px, 7vw, 80px); color: #fff3c4; text-shadow: 0 0 30px var(--gold), 0 0 60px #ff9a20; }
 #evolve h3 { margin: 4px 0; font-size: clamp(20px, 3vw, 30px); color: var(--gold); }
 #evolve p { margin: 6px auto 0; max-width: min(640px, 84vw); font-size: clamp(14px, 1.8vw, 18px); line-height: 1.5; text-shadow: 0 2px 8px #000; }
 
@@ -220,21 +219,89 @@ body { font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
 
 /* 도감 아이콘: 색과 모양만 CSS로 */
 .ico { --c: #fff; position: relative; display: block; width: 46px; height: 46px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fff 0 12%, var(--c) 40%, transparent 70%);
+  box-shadow: 0 0 12px var(--c), inset 0 0 8px var(--c);
   background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--c) 40%, #fff) 0 12%, color-mix(in srgb, var(--c) 55%, transparent) 40%, transparent 70%);
   box-shadow: 0 0 12px color-mix(in srgb, var(--c) 60%, transparent), inset 0 0 8px color-mix(in srgb, var(--c) 70%, transparent); }
 .ico.locked { filter: brightness(0) saturate(0); opacity: 0.55; box-shadow: none; outline: 1px solid rgba(255, 255, 255, 0.15); }
 .ico-coccus, .ico-resistantCoccus { border-radius: 0; box-shadow: none;
   background: radial-gradient(circle at 35% 40%, var(--c) 0 17%, transparent 19%), radial-gradient(circle at 62% 35%, var(--c) 0 17%, transparent 19%),
     radial-gradient(circle at 50% 62%, var(--c) 0 17%, transparent 19%), radial-gradient(circle at 70% 64%, var(--c) 0 13%, transparent 15%); }
-.ico-bacillus { width: 46px; height: 20px; margin: 13px 0; border-radius: 99px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 50%, #fff), var(--c)); }
+.ico-bacillus { width: 46px; height: 20px; margin: 13px 0; border-radius: 99px; background: linear-gradient(180deg, #fff, var(--c)); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 50%, #fff), var(--c)); }
 .ico-virus { width: 30px; height: 30px; margin: 8px; background: var(--c); outline: 4px dotted var(--c); outline-offset: 3px; }
-.ico-infected { background: radial-gradient(circle at 50% 50%, #3a0a5a 0 18%, color-mix(in srgb, var(--c) 60%, transparent) 22% 60%, transparent 70%); }
+.ico-infected { background: radial-gradient(circle at 50% 50%, #3a0a5a 0 18%, var(--c) 22% 60%, transparent 70%); background: radial-gradient(circle at 50% 50%, #3a0a5a 0 18%, color-mix(in srgb, var(--c) 60%, transparent) 22% 60%, transparent 70%); }
 .ico-superbug { border-radius: 0; box-shadow: none; clip-path: polygon(50% 0, 61% 30%, 95% 25%, 72% 50%, 95% 75%, 61% 70%, 50% 100%, 39% 70%, 5% 75%, 28% 50%, 5% 25%, 39% 30%); background: var(--c); }
-.ico-net { background: repeating-conic-gradient(var(--c) 0 3deg, transparent 3deg 30deg), radial-gradient(circle, transparent 30%, color-mix(in srgb, var(--c) 40%, transparent) 32% 34%, transparent 36% 60%, color-mix(in srgb, var(--c) 40%, transparent) 62% 64%, transparent 66%); }
+.ico-net { background: repeating-conic-gradient(var(--c) 0 3deg, transparent 3deg 30deg); background: repeating-conic-gradient(var(--c) 0 3deg, transparent 3deg 30deg), radial-gradient(circle, transparent 30%, color-mix(in srgb, var(--c) 40%, transparent) 32% 34%, transparent 36% 60%, color-mix(in srgb, var(--c) 40%, transparent) 62% 64%, transparent 66%); }
 .ico-antibody::after, .ico-plasmaCell::after { content: 'Y'; position: absolute; inset: 0; display: grid; place-content: center; font: 800 26px system-ui; color: #fff; text-shadow: 0 0 8px var(--c); }
 .ico-complement { background: radial-gradient(circle, transparent 38%, var(--c) 40% 48%, transparent 52%); }
 .ico-cytokine { background: radial-gradient(circle at 30% 30%, var(--c) 0 9%, transparent 11%), radial-gradient(circle at 70% 40%, var(--c) 0 9%, transparent 11%), radial-gradient(circle at 45% 72%, var(--c) 0 9%, transparent 11%); box-shadow: none; }
-.ico-nk { background: radial-gradient(circle, #fff 0 30%, color-mix(in srgb, var(--c) 50%, transparent) 50%, transparent 70%); }
+.ico-nk { background: radial-gradient(circle, #fff 0 30%, var(--c) 50%, transparent 70%); background: radial-gradient(circle, #fff 0 30%, color-mix(in srgb, var(--c) 50%, transparent) 50%, transparent 70%); }
 .ico-memory { background: radial-gradient(circle, var(--c) 0 20%, transparent 22% 42%, var(--c) 44% 48%, transparent 50%); }
 .ico-fever { background: radial-gradient(circle, #fff3c4 0 15%, #ff9a40 35%, rgba(255, 60, 40, 0.4) 60%, transparent 72%); }
 .ico.evo { --c: var(--gold) !important; outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* 폰트: 제목·숫자는 Black Han Sans, 본문은 Pretendard */
+body { font-family: 'Pretendard', system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif; }
+#title h1, #picker h2, .card h3, #act h2, #evolve strong, #evolve h3, #warn strong, #allout strong, .rc h1, .rc .stats b, .rk h2, .rk .mine b,
+.rk li em, #title aside li em, #combo, #prologue .call, #prologue .cough, #prologue .warning, #prologue .clock, #hud .lv, .cx header h2, .pz h2, #fps {
+  font-family: 'Black Han Sans', 'Pretendard', sans-serif; font-weight: 400; }
+
+@keyframes popin { 0% { transform: scale(0.3); opacity: 0; } 55% { transform: scale(1.22); opacity: 1; } 78% { transform: scale(0.94); } 100% { transform: scale(1); } }
+
+/* 총공격! 큰 글씨 */
+#allout strong { position: absolute; top: 18%; left: 0; right: 0; text-align: center; font-size: clamp(48px, 8vw, 96px); color: #dffffb;
+  text-shadow: 0 0 24px #3ff2e6, 0 0 60px #3ff2e6; animation: popin 0.7s cubic-bezier(.2, .9, .3, 1.2) both, allouttext 2.4s ease-in forwards; }
+@keyframes allouttext { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
+
+/* 콤보 */
+#combo { position: fixed; right: 4vw; top: 38%; z-index: 2; pointer-events: none; text-align: right; opacity: 0; transition: opacity 0.3s; color: #bffcff;
+  text-shadow: 0 0 14px currentColor; transform: scale(var(--grow, 1)); transform-origin: right center; }
+#combo.on { opacity: 1; }
+#combo b { display: block; font-size: 64px; font-weight: 400; line-height: 0.9; }
+#combo span { font-size: 22px; letter-spacing: 0.06em; }
+#combo.pop b { animation: popin 0.35s cubic-bezier(.2, .9, .3, 1.4) both; }
+#combo.tier1 { color: #ffe08a; }
+#combo.tier2 { color: #ff9a4a; }
+#combo.tier3 { color: #ff4a8a; animation: comboHue 0.8s linear infinite; }
+@keyframes comboHue { 50% { color: #c08aff; } }
+
+/* 일시정지 */
+#pause-btn { position: fixed; top: 12px; right: 14px; z-index: 7; width: 40px; height: 40px; display: flex; gap: 6px; align-items: center; justify-content: center;
+  border-radius: 12px; cursor: pointer; background: rgba(4, 24, 30, 0.65); border: 1px solid rgba(120, 245, 235, 0.5); }
+#pause-btn i { width: 5px; height: 16px; border-radius: 2px; background: #bffcff; }
+#pause-btn:hover { box-shadow: 0 0 14px rgba(63, 242, 230, 0.5); }
+#pause { position: fixed; inset: 0; z-index: 7; display: flex; align-items: center; justify-content: center; background: rgba(2, 4, 12, 0.7); backdrop-filter: blur(3px); animation: fadein 0.2s both; }
+.pz { display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: min(300px, 80vw); text-align: center; }
+.pz h2 { margin: 0 0 12px; font-size: 44px; color: #bffcff; text-shadow: 0 0 18px #3ff2e6; animation: popin 0.5s cubic-bezier(.2, .9, .3, 1.2) both; }
+.pz button { padding: 12px; border-radius: 12px; font: inherit; font-size: 17px; color: #e6ffff; cursor: pointer; background: rgba(8, 40, 46, 0.85); border: 1px solid rgba(120, 245, 235, 0.3); }
+.pz button.sel, .pz button:hover { border-color: #bffcff; box-shadow: 0 0 14px rgba(63, 242, 230, 0.5); }
+.pz small { margin-top: 8px; opacity: 0.6; }
+
+/* 프롤로그 */
+#prologue { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
+#prologue .bg { position: absolute; inset: 0; background: #030208; --lens: 0vmax;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent var(--lens), #000 calc(var(--lens) + 2px));
+  mask-image: radial-gradient(circle at 50% 50%, transparent var(--lens), #000 calc(var(--lens) + 2px)); }
+#prologue .room { position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s; }
+#prologue .room.on { opacity: 1; }
+#prologue .lamp { position: absolute; left: 50%; top: 58%; width: 80vmin; height: 80vmin; transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 196, 120, 0.45), rgba(255, 150, 70, 0.12) 45%, transparent 70%); animation: lamp 3s ease-in-out infinite alternate; }
+@keyframes lamp { to { opacity: 0.8; } }
+#prologue .clock { position: absolute; top: 5vh; right: 5vw; font-size: clamp(18px, 2.4vw, 28px); color: #ffcf8a; text-shadow: 0 0 12px rgba(255, 170, 80, 0.7); }
+#prologue .night, #prologue .dive { position: absolute; left: 0; right: 0; text-align: center; margin: 0; font-size: clamp(18px, 2.6vw, 28px); line-height: 1.5; padding: 0 8vw; }
+#prologue .night { top: 62%; color: #ffe8c8; }
+#prologue .dive { top: 16%; opacity: 0; transition: opacity 0.4s; text-shadow: 0 2px 10px #000; }
+#prologue .dive.on { opacity: 1; }
+#prologue .typing::after { content: '▍'; color: #3ff2e6; animation: blink 0.6s steps(1) infinite; }
+#prologue .cough { position: absolute; top: 30%; left: 0; right: 0; text-align: center; font-size: clamp(56px, 10vw, 120px); color: #fff; opacity: 0; }
+#prologue .cough.on { animation: popin 0.5s cubic-bezier(.2, .9, .3, 1.4) both; opacity: 1; }
+#prologue .warning { position: absolute; top: 48%; left: 0; right: 0; text-align: center; font-size: clamp(26px, 4vw, 44px); color: #ff3a4a; text-shadow: 0 0 20px #ff0020; opacity: 0; }
+#prologue .warning.on { opacity: 1; animation: warn 0.3s steps(2) infinite alternate; }
+#prologue.shake { animation: shake 0.45s linear 2; }
+@keyframes shake { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-14px, 6px); } 40% { transform: translate(12px, -8px); } 60% { transform: translate(-8px, 4px); } 80% { transform: translate(6px, -4px); } }
+#prologue .officer { left: 50%; bottom: 60px; }
+#prologue .call { position: absolute; top: 34%; left: 0; right: 0; text-align: center; color: #fff; opacity: 0; text-shadow: 0 0 30px #3ff2e6, 0 0 70px rgba(63, 242, 230, 0.6); }
+#prologue .call.on { opacity: 1; animation: popin 0.6s cubic-bezier(.2, .9, .3, 1.3) both; }
+#prologue .call.big { font-size: clamp(48px, 9vw, 110px); }
+#prologue .call.count { font-size: clamp(90px, 16vw, 200px); color: #ffe08a; text-shadow: 0 0 30px #ffb020; }
+#prologue .skip { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 13px; opacity: 0.6; }

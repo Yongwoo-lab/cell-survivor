@@ -11,22 +11,31 @@ export function createCardPicker(onPick: (i: number) => void) {
   root.id = 'picker';
   root.hidden = true;
   document.body.appendChild(root);
-  let shown: Pick[] | null = null;
+  let shown: Pick[] | null = null, leaving = 0;
 
-  addEventListener('keydown', (e) => {
-    const i = ['Digit1', 'Digit2', 'Digit3', 'Numpad1', 'Numpad2', 'Numpad3'].indexOf(e.code) % 3;
-    if (shown && i >= 0 && i < shown.length) onPick(i);
-  });
+  // 고른 카드는 반짝이며 날아가고 나머지는 사라진다 (그동안 게임은 이미 다시 진행)
+  const pick = (i: number) => {
+    if (!shown || leaving || i < 0 || i >= shown.length) return;
+    root.querySelectorAll('.card').forEach((c, j) => c.classList.add(j === i ? 'picked' : 'dismiss'));
+    leaving = window.setTimeout(() => { leaving = 0; if (!shown) root.hidden = true; }, 480);
+    onPick(i);
+  };
+  addEventListener('keydown', (e) => pick(['Digit1', 'Digit2', 'Digit3', 'Numpad1', 'Numpad2', 'Numpad3'].indexOf(e.code) % 3));
   root.addEventListener('click', (e) => {
     const el = (e.target as HTMLElement).closest<HTMLElement>('.card');
-    if (shown && el) onPick(Number(el.dataset.i));
+    if (el) pick(Number(el.dataset.i));
   });
 
   return (w: World) => {
     if (w.choosing === shown) return;
     shown = w.choosing;
-    root.hidden = !shown;
-    if (!shown) return;
+    if (!shown) {
+      if (!leaving) root.hidden = true;
+      return;
+    }
+    clearTimeout(leaving);
+    leaving = 0;
+    root.hidden = false;
     root.innerHTML = `<h2>${dialogue.ui.levelUp}</h2><div class="hand">${shown.map((c, i) => {
       const evo = isEvolution(c);
       const cur = w.cards[c.id] ?? 0, max = evo ? 1 : c.levels.length;

@@ -1,3 +1,19 @@
 [
-  { "type": "sound", "source": "Web Audio로 자체 합성" }
+  { "type": "sound", "source": "Web Audio로 자체 합성" },
+  {
+    "type": "font",
+    "name": "Black Han Sans",
+    "author": "The Black Han Sans Project Authors (Zess Type)",
+    "license": "SIL Open Font License 1.1",
+    "source": "https://fonts.google.com/specimen/Black+Han+Sans",
+    "licenseFile": "public/fonts/black-han-sans/OFL.txt"
+  },
+  {
+    "type": "font",
+    "name": "Pretendard",
+    "author": "Kil Hyung-jin (orioncactus)",
+    "license": "SIL Open Font License 1.1",
+    "source": "https://github.com/orioncactus/pretendard",
+    "licenseFile": "public/fonts/Pretendard-OFL.txt"
+  }
 ]

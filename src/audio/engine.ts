@@ -30,6 +30,12 @@ export function unlock(onStart: () => void) {
   onStart();
 }
 
+// 일시정지: 컨텍스트를 멈추면 브금 스케줄러도 시간이 멈춘다
+export function setPaused(on: boolean) {
+  if (!ctx) return;
+  void (on ? ctx.suspend() : ctx.resume());
+}
+
 export function toggleMute() {
   muted = !muted;
   if (ctx) master.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.03);

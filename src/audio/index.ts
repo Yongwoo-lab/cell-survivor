@@ -5,11 +5,14 @@ import { sfx } from './sfx';
 import { setMusicMode } from './music';
 
 export { sfx } from './sfx';
-export { unlock, toggleMute, isMuted } from './engine';
+export { unlock, toggleMute, isMuted, setPaused } from './engine';
+import balance from '../data/balance.json';
+const TIERS = balance.juice.comboTiers;
+export const comboTier = (n: number) => TIERS.filter((t) => n >= t).length;
 export { startMusic } from './music';
 
 const BOSS = ENEMIES.findIndex((e) => e.id === 'superbug');
-let seenWorld: World | null = null, prevAct = -1, prevSlowmo = 0, prevEvolved = 0;
+let seenWorld: World | null = null, prevAct = -1, prevSlowmo = 0, prevEvolved = 0, prevCombo = 0;
 
 export function soundFrame(w: World, withSfx: boolean) {
   setMusicMode(w.boss.spawned && !w.over ? 'boss' : w.act >= 1 ? 'tense' : 'calm');
@@ -22,7 +25,9 @@ export function soundFrame(w: World, withSfx: boolean) {
   if (w.fx.pill) sfx.pill();
   if (w.evolveLog.length > prevEvolved) sfx.evolve();
   prevEvolved = w.evolveLog.length;
-  if (w.deaths.length) w.deaths.some((d) => d.kind === BOSS) ? sfx.bossDeath() : sfx.kill();
+  if (w.deaths.length) w.deaths.some((d) => d.kind === BOSS) ? sfx.bossDeath() : sfx.kill(comboTier(w.combo));
+  if (comboTier(w.combo) > comboTier(prevCombo)) sfx.combo(comboTier(w.combo));
+  prevCombo = w.combo;
   if (w.slowmo > 0 && prevSlowmo <= 0) sfx.levelUp();
   prevSlowmo = w.slowmo;
   if (w.act !== prevAct) { if (prevAct >= 0 || w.time > 0) sfx.act(); prevAct = w.act; }

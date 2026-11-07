@@ -23,7 +23,8 @@ export function createWorld() {
     over: false,
     player: { x: 0, y: 0, hp: P.hp, maxHp: P.hp, invuln: 0, xp: 0, level: 1, xpToNext: X.base },
     // silent: 처치가 아니라 사라짐 (바이러스가 세포에 들어감) → 조각·처치 수 없음
-    enemies: new Pool(MAX_ENEMIES, ['x', 'y', 'hp', 'flash', 'id', 'kind', 'mark', 'macroCd', 'spawnCd', 'silent'] as const),
+    // squint: 맞았을 때 눈을 찡그리는 시간 (화면 연출용)
+    enemies: new Pool(MAX_ENEMIES, ['x', 'y', 'hp', 'flash', 'id', 'kind', 'mark', 'macroCd', 'spawnCd', 'silent', 'squint'] as const),
     cells: new Pool(64, ['x', 'y'] as const), // 움직이지 않는 정상 세포 (2막~)
     cellsPlaced: false,
     act: 0,
@@ -46,7 +47,11 @@ export function createWorld() {
     antibioticUses: 0,
     noEffectHits: [] as Vec2[],
     noEffectCd: 0,
-    notes: [] as string[], // 정보 장교에게 말할 거리 (dialogue.officer 키)
+    notes: [] as string[],
+    // 화면 재미 요소 (규칙에는 영향 없음)
+    combo: 0,
+    comboT: 0,
+    dmgNums: [] as { x: number; y: number; v: number }[], // 이번 프레임 피해 숫자 // 정보 장교에게 말할 거리 (dialogue.officer 키)
     fx: { shot: 0, hit: 0, pickup: 0, hurt: 0, pill: 0 }, // 이번 프레임 효과음용 횟수
     bossWarn: 0, // >0 이면 보스 등장까지 남은 초 (경고 연출)
     resist: {} as Record<string, number>, // 공격 종류 → 피해 감소율 (보스 내성)
@@ -85,6 +90,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
   w.fx.shot = w.fx.hit = w.fx.pickup = w.fx.hurt = w.fx.pill = 0;
   w.rain.length = 0;
   w.noEffectHits.length = 0;
+  w.dmgNums.length = 0;
   if (w.over || w.choosing) return;
   let dt = realDt;
   if (w.evoSlow > 0) {
@@ -116,6 +122,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
   for (const k in w.resist) w.resist[k] = Math.max(0, w.resist[k] - bossRes.decayPerSec * dt);
   w.resistPopCd -= dt;
   w.noEffectCd -= dt;
+  if ((w.comboT -= dt) <= 0) w.combo = 0;
   w.antibioticT -= dt;
 
   // 보스전이 길어지면 총공격
@@ -179,6 +186,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     e.flash[i] -= dt;
     e.mark[i] -= dt;
     e.macroCd[i] -= dt;
+    e.squint[i] -= dt;
   }
   // 바이러스가 정상 세포에 닿으면 세포가 감염세포로 바뀐다
   const cf = w.cells.f, hitCell = C.radius + enemies[VIRUS].radius;
@@ -267,6 +275,9 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
     if (e.hp[i] > 0) continue;
     const kind = e.kind[i];
     if (e.silent[i]) { E.remove(i); continue; }
+    // 콤보: comboWindow초 안에 연속 처치
+    w.combo = w.comboT > 0 ? w.combo + 1 : 1;
+    w.comboT = balance.juice.comboWindow;
     w.deaths.push({ x: e.x[i], y: e.y[i], kind });
     w.kills[kind]++;
     const g = w.gems.add();

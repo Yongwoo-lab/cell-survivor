@@ -6,11 +6,18 @@ import dialogue from '../data/dialogue.json';
 import { ENEMIES, MAX_ENEMIES, type World } from '../game/world';
 import { glassy, time } from './materials';
 import { createParticles, createShockwaves, createPopups, createRain } from './effects';
+import { createEyes } from './eyes';
+import { createNumbers } from './numbers';
+import { shake } from './camera';
 
 const COCCUS = ENEMIES.find((e) => e.id === 'coccus')!;
 const T = balance.cardTuning, CELL = balance.cells;
 const BOSS = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 const BACILLUS = ENEMIES.findIndex((e) => e.id === 'bacillus');
+// 눈이 달린 적과 눈 크기(반지름 대비)
+const EYE_SIZE = Object.fromEntries(
+  (['coccus', 'bacillus', 'virus', 'resistantCoccus', 'superbug'] as const).map((id) => [ENEMIES.findIndex((e) => e.id === id), id === 'superbug' ? 0.36 : 0.62]),
+) as Record<number, number>;
 
 // 게임 (x, y) → 화면 (x, z)
 function createPlayerMesh() {
@@ -220,6 +227,17 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   const popups = createPopups(scene, camera, dialogue.ui.resist);
   const noEffect = createPopups(scene, camera, dialogue.ui.noEffect);
   const rain = createRain(scene);
+  const eyes = createEyes(scene, camera, MAX_ENEMIES * 2 + 2);
+  const numbers = createNumbers(scene, camera);
+  // 보스의 화난 눈썹
+  const browMesh = instanced(new THREE.BoxGeometry(1, 0.22, 0.05), new THREE.MeshBasicMaterial({ color: 0x1a0306, depthWrite: false }), 2);
+  browMesh.renderOrder = 6;
+  scene.add(browMesh);
+  const rz = new THREE.Quaternion(), Z = new THREE.Vector3(0, 0, 1), browP = new THREE.Vector3(), eyeC = new THREE.Vector3();
+  // 백혈구 눈: 이동 방향을 보고 가끔 깜빡임 (화면 연출 상태)
+  let lastX = 0, lastY = 0, lookX = 0, lookY = 0, blinkIn = 3, blinkT = 0;
+  // 화면 흔들림을 걸 사건들
+  let seenWorld: World | null = null, prevBoss = false, prevEvolve = 0, prevPhase2 = false;
 
   // 항생제 알약: 반은 흰색, 반은 붉은 캡슐 (정점 색). 사라지기 직전 깜빡인다.
   const pillGeo = new THREE.CapsuleGeometry(0.28, 0.55, 6, 14).rotateZ(Math.PI / 2);
@@ -247,13 +265,35 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
     player,
     sync(w: World, dt: number, t: number) {
       time.value = t;
+      // 화면 흔들림: 보스 등장·진화·보스 처치는 크게
+      if (w !== seenWorld) { seenWorld = w; prevBoss = false; prevEvolve = 0; prevPhase2 = false; }
+      if (w.boss.spawned && !prevBoss) shake(1.2);
+      if (w.evolveLog.length > prevEvolve) shake(1.0);
+      if (w.boss.phase2 && !prevPhase2) shake(0.8);
+      if (w.deaths.some((d) => d.kind === BOSS)) shake(1.8);
+      if (w.fx.hurt) shake(0.35);
+      if (w.bursts.length) shake(0.15);
+      prevBoss = w.boss.spawned; prevEvolve = w.evolveLog.length; prevPhase2 = w.boss.phase2;
       player.position.set(w.player.x, 1, w.player.y);
       // 무적 시간 동안 깜빡임
       player.visible = w.player.invuln <= 0 || Math.floor(t * 20) % 2 === 0;
 
       const e = w.enemies.f;
       for (const c of counts) c.fill(0);
-      let marks = 0;
+      let marks = 0, bossAt = -1;
+      eyes.begin();
+
+      // 백혈구 눈
+      const vx = (w.player.x - lastX) / Math.max(dt, 1e-3), vy = (w.player.y - lastY) / Math.max(dt, 1e-3);
+      lastX = w.player.x; lastY = w.player.y;
+      if (Math.hypot(vx, vy) > 0.5) {
+        const l = Math.hypot(vx, vy);
+        lookX += (vx / l - lookX) * Math.min(1, dt * 10);
+        lookY += (-vy / l - lookY) * Math.min(1, dt * 10);
+      }
+      if ((blinkIn -= dt) <= 0) { blinkT = 0.13; blinkIn = 2 + Math.random() * 3; }
+      blinkT -= dt;
+      if (player.visible) eyes.pair(player.position, 1, 0.36, lookX, lookY, false, blinkT > 0);
       for (let i = 0; i < w.enemies.count; i++) {
         const id = e.id[i], kind = e.kind[i], def = ENEMIES[kind];
         const ms = kindMeshes[kind], v = id % ms.length, j = counts[kind][v]++;
@@ -268,12 +308,34 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
           : kind === BOSS && w.boss.phase2 ? tmpColor.copy(kindColors[kind]).multiplyScalar(2.4 + Math.sin(t * 9) * 0.9)
           : kindColors[kind];
         ms[v].setColorAt(j, col);
+        const eye = EYE_SIZE[kind];
+        if (eye) {
+          // 적은 플레이어를 쳐다본다 (화면 위쪽 = 게임 -y)
+          const r = def.radius * (kind === BOSS ? 1 : look.scale);
+          const dx = w.player.x - e.x[i], dy = w.player.y - e.y[i], l = Math.hypot(dx, dy) || 1;
+          eyes.pair(eyeC.copy(p), r, r * eye * 2, dx / l, -dy / l, e.squint[i] > 0);
+          if (kind === BOSS) bossAt = i;
+        }
         if (e.mark[i] > 0) {
           q.setFromAxisAngle(UP, t * 3 + id);
           s.setScalar((def.radius / COCCUS.radius) * (1 + Math.sin(t * 10) * 0.08));
           markMesh.setMatrixAt(marks++, m.compose(p, q, s));
         }
       }
+      if (bossAt >= 0) {
+        const r = ENEMIES[BOSS].radius;
+        p.set(e.x[bossAt], r + 0.1, e.y[bossAt]);
+        for (const side of [-1, 1]) {
+          rz.setFromAxisAngle(Z, side * -0.45);
+          q.copy(camera.quaternion).multiply(rz);
+          s.set(r * 0.55, r * 0.5, 1);
+          browMesh.setMatrixAt(side < 0 ? 0 : 1, m.compose(eyes.browPos(p, r, side, browP), q, s));
+        }
+      }
+      browMesh.count = bossAt >= 0 ? 2 : 0;
+      browMesh.instanceMatrix.needsUpdate = true;
+      eyes.end();
+
       kindMeshes.forEach((ms, k) => ms.forEach((mesh, v) => {
         mesh.count = counts[k][v];
         mesh.instanceMatrix.needsUpdate = true;
@@ -361,6 +423,8 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
       for (const c of w.infections) particles.burst(c.x, 0.6, c.y, infectColor, 14, 0.8);
       for (const h of w.resistHits) popups.add(h.x, 3.6, h.y);
       popups.update(dt);
+      for (const d of w.dmgNums) numbers.add(d.x, 1.3, d.y, d.v);
+      numbers.update(dt);
       for (const h of w.noEffectHits) noEffect.add(h.x, 1.4, h.y);
       noEffect.update(dt);
       for (const r of w.rain) rain.add(r.x, r.y);
