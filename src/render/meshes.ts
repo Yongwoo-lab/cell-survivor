@@ -5,7 +5,7 @@ import cardData from '../data/cards.json';
 import dialogue from '../data/dialogue.json';
 import { ENEMIES, MAX_ENEMIES, type World } from '../game/world';
 import { glassy, time } from './materials';
-import { createParticles, createShockwaves, createPopups, createRain } from './effects';
+import { createParticles, createShockwaves, createPopups, createRain, createCorpses } from './effects';
 import { createEyes } from './eyes';
 import { createNumbers } from './numbers';
 import { shake } from './camera';
@@ -99,7 +99,7 @@ export function webTexture() {
 }
 
 // 막대균: 이동 방향(x축)으로 긴 캡슐
-const bacillusGeometry = (r: number) => new THREE.CapsuleGeometry(r * 0.5, r * 2.2, 6, 12).rotateZ(Math.PI / 2);
+export const bacillusGeometry = (r: number) => new THREE.CapsuleGeometry(r * 0.5, r * 2.2, 6, 12).rotateZ(Math.PI / 2);
 
 // 정이십면체 꼭짓점 방향 (중복 제거)
 function icoDirs(detail: number) {
@@ -113,7 +113,7 @@ function icoDirs(detail: number) {
 }
 
 // 바이러스: 작은 껍질 + 돌기 12개
-function virusGeometry(r: number) {
+export function virusGeometry(r: number) {
   const parts = [new THREE.IcosahedronGeometry(r * 0.7, 1)];
   for (const d of icoDirs(0)) parts.push(new THREE.IcosahedronGeometry(r * 0.22, 0).translate(d.x * r, d.y * r, d.z * r));
   return mergeGeometries(parts);
@@ -143,7 +143,9 @@ function bossGeometry(r: number) {
 const VARIANTS = [3, 4, 5, 6];
 const LOOKS = 256; // 개체별 회전·크기는 id로 이 표에서 고른다 (swap 삭제에도 모습 유지)
 
-export function createView(scene: THREE.Scene, camera: THREE.Camera) {
+type Ripple = (x: number, y: number, z: number, strength: number, life?: number) => void;
+
+export function createView(scene: THREE.Scene, camera: THREE.Camera, ripple: Ripple = () => {}) {
   const player = createPlayerMesh();
   scene.add(player);
 
@@ -234,6 +236,13 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
   const popups = createPopups(scene, camera, dialogue.ui.resist);
   const noEffect = createPopups(scene, camera, dialogue.ui.noEffect);
   const rain = createRain(scene);
+  const bac = ENEMIES.find((e) => e.id === 'bacillus')!, vir = ENEMIES.find((e) => e.id === 'virus')!;
+  const corpses = createCorpses(scene, {
+    half: new THREE.CapsuleGeometry(bac.radius * 0.5, bac.radius * 0.9, 4, 10).rotateZ(Math.PI / 2),
+    virus: virusGeometry(vir.radius),
+    blob: new THREE.SphereGeometry(1, 24, 16),
+  });
+  const KIND = Object.fromEntries(ENEMIES.map((e, i) => [e.id, i])) as Record<string, number>;
   const eyes = createEyes(scene, camera, MAX_ENEMIES * 2 + 2);
   const numbers = createNumbers(scene, camera);
   // 보스의 화난 눈썹
@@ -272,6 +281,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
     player,
     sync(w: World, dt: number, t: number) {
       time.value = t;
+      const e0 = w.enemies.f;
       // 화면 흔들림: 보스 등장·진화·보스 처치는 크게
       if (w !== seenWorld) { seenWorld = w; prevBoss = false; prevEvolve = 0; prevPhase2 = false; }
       if (w.boss.spawned && !prevBoss) shake(1.2);
@@ -280,6 +290,11 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
       if (w.deaths.some((d) => d.kind === BOSS)) shake(1.8);
       if (w.fx.hurt) shake(0.35);
       if (w.bursts.length) shake(0.15);
+      // 굴절 충격파: 보체 폭발(몇 개만), 진화, 보스 2페이즈, 보스 처치
+      for (const b of w.bursts.slice(0, 2)) ripple(b.x, 0.4, b.y, 0.012, 0.45);
+      if (w.evolveLog.length > prevEvolve) ripple(w.player.x, 1, w.player.y, 0.05, 0.8);
+      if (w.boss.phase2 && !prevPhase2) for (let i = 0; i < w.enemies.count; i++) if (e0.kind[i] === BOSS) ripple(e0.x[i], 1.5, e0.y[i], 0.05, 0.8);
+      for (const d of w.deaths) if (d.kind === BOSS) ripple(d.x, 1.5, d.y, 0.08, 1.1);
       prevBoss = w.boss.spawned; prevEvolve = w.evolveLog.length; prevPhase2 = w.boss.phase2;
       player.position.set(w.player.x, 1, w.player.y);
       // 무적 시간 동안 깜빡임
@@ -424,7 +439,16 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
       gemMesh.instanceMatrix.needsUpdate = true;
 
       for (const d of w.deaths) {
-        if (d.kind !== BOSS) { particles.burst(d.x, 0.4, d.y, kindColors[d.kind]); continue; }
+        const def = ENEMIES[d.kind], col = kindColors[d.kind];
+        if (d.kind !== BOSS) corpses.stain(d.x, d.y, def.radius * 2.4, col); // 1.5초 동안 옅은 잔해 얼룩
+        if (d.kind === KIND.bacillus) {
+          corpses.add('half', d.x, def.radius + 0.1, d.y, col, -Math.atan2(w.player.y - d.y, w.player.x - d.x));
+          particles.burst(d.x, 0.4, d.y, col, 6, 0.6);
+          continue;
+        }
+        if (d.kind === KIND.virus) { corpses.add('shrink', d.x, def.radius + 0.1, d.y, col); continue; }
+        if (d.kind === KIND.infected) { corpses.add('melt', d.x, def.radius, d.y, col, 0, def.radius); continue; }
+        if (d.kind !== BOSS) { particles.burst(d.x, 0.4, d.y, col); continue; } // 구균·내성균: 터지며 조각
         particles.burst(d.x, 1.5, d.y, kindColors[d.kind], 160, 2.5);
         particles.burst(d.x, 1.5, d.y, flashColor, 60, 1.8);
         for (const r of [3, 5, 8]) shocks.add(d.x, d.y, r);
@@ -458,6 +482,7 @@ export function createView(scene: THREE.Scene, camera: THREE.Camera) {
       }
       particles.update(dt);
       shocks.update(dt);
+      corpses.update(dt);
     },
   };
 }

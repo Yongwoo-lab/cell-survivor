@@ -62,6 +62,15 @@ export function createResult() {
         </div>
         <p class="back">${U.next}</p>`;
         card.hidden = false;
+        // 숫자가 올라가며 세어진다
+        const t0 = performance.now(), targets = [w.time, kills, w.player.level];
+        const cells = [...card.querySelectorAll<HTMLElement>('.stats b')];
+        const tick = () => {
+          const k = Math.min(1, (performance.now() - t0) / 900), e = 1 - (1 - k) ** 3;
+          cells.forEach((c, i) => { c.textContent = i === 0 ? mmss(targets[0] * e) : String(Math.round(targets[i] * e)); });
+          if (k < 1 && !card.hidden) requestAnimationFrame(tick);
+        };
+        tick();
         onCard();
       }, ENDING_SHOW);
     },

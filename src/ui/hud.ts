@@ -19,16 +19,16 @@ export function createHud() {
   root.innerHTML = `
     <div class="boss" hidden><div class="row"><span class="k">${U.boss}</span><span class="name">${bossName}</span><span class="v"></span></div><div class="line"><i></i></div></div>
     <div class="row"><span class="k">${U.hp}</span><div class="line hp"><i></i></div><span class="v hpv"></span></div>
-    <div class="row"><span class="k">${U.xp}</span><div class="line xp"><i></i></div><span class="v lv"></span></div>
+    <div class="row"><span class="k">${U.xp}</span><div class="line xp"><b></b><i></i></div><span class="v lv"></span></div>
     <span class="pill sticker" hidden></span>`;
   // 발열: 화면 가장자리가 붉게 달아오름
   const fever = document.createElement('div');
   fever.id = 'fever';
   document.body.append(fever, scope, root);
   const $ = (s: string) => root.querySelector<HTMLElement>(s)!;
-  const hp = $('.hp i'), hpv = $('.hpv'), xp = $('.xp i'), lv = $('.lv'), boss = $('.boss'), bossBar = $('.boss i'), bossV = $('.boss .v'), pill = $('.pill');
+  const hp = $('.hp i'), hpv = $('.hpv'), xp = $('.xp i'), ghost = $('.xp b'), lv = $('.lv'), boss = $('.boss'), bossBar = $('.boss i'), bossV = $('.boss .v'), pill = $('.pill');
   const sample = scope.querySelector<HTMLElement>('.sample')!;
-  let lastAct = -1;
+  let lastAct = -1, lastXp = 0, lastLv = 1;
 
   return (w: World | null) => {
     root.hidden = fever.hidden = scope.hidden = !w;
@@ -37,7 +37,11 @@ export function createHud() {
     hp.style.width = `${(p.hp / p.maxHp) * 100}%`;
     hpv.textContent = `${pad(p.hp)}/${pad(p.maxHp)}`;
     root.classList.toggle('low', p.hp / p.maxHp < 0.3);
-    xp.style.width = `${(p.xp / p.xpToNext) * 100}%`;
+    // 경험치: 흰 잔상이 먼저 가고 바가 부드럽게 따라 차오른다. 레벨업으로 줄어들 땐 바로.
+    const xpw = (p.xp / p.xpToNext) * 100;
+    if (p.level !== lastLv || xpw < lastXp) { xp.style.transition = ghost.style.transition = 'none'; void xp.offsetWidth; }
+    else { xp.style.transition = 'width 0.45s cubic-bezier(.2,.7,.2,1)'; ghost.style.transition = 'none'; }
+    if (xpw !== lastXp || p.level !== lastLv) { xp.style.width = ghost.style.width = `${xpw}%`; lastXp = xpw; lastLv = p.level; }
     lv.textContent = `Lv ${pad(p.level, 2)}`;
     boss.hidden = !w.boss.spawned || w.won;
     bossBar.style.width = `${(w.boss.hp / w.boss.maxHp) * 100}%`;

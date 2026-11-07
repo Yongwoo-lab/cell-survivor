@@ -50,18 +50,28 @@ function createBackground() {
 
 // 현미경 렌즈 (OutputPass 뒤, sRGB 공간): 둥근 비네팅, 가장자리 색수차, 옅은 먼지·얼룩, 미세한 입자감
 const LensShader = {
-  uniforms: { tDiffuse: { value: null }, uAspect: { value: 16 / 9 }, uTime: { value: 0 }, uCB: { value: 0 } },
+  uniforms: { tDiffuse: { value: null }, uAspect: { value: 16 / 9 }, uTime: { value: 0 }, uCB: { value: 0 },
+    uRipple: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, 0)) } },
   vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uAspect; uniform float uTime; uniform float uCB; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float uAspect; uniform float uTime; uniform float uCB; uniform vec4 uRipple[4]; varying vec2 vUv;
     float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     float blob(vec2 c, float r) { return smoothstep(r, r * 0.25, length((vUv - c) * vec2(uAspect, 1.0))); }
     float ring(vec2 c, float r, float w) { return smoothstep(w, 0.0, abs(length((vUv - c) * vec2(uAspect, 1.0)) - r)); }
     void main() {
-      vec2 d = vUv - 0.5;
+      // 굴절 충격파: 퍼지는 고리 부분만 화면을 일그러뜨린다 (x, y: 중심 uv, z: 반지름, w: 세기)
+      vec2 uv = vUv;
+      for (int i = 0; i < 4; i++) {
+        vec4 rp = uRipple[i];
+        if (rp.w <= 0.0) continue;
+        vec2 q = (vUv - rp.xy) * vec2(uAspect, 1.0);
+        float dist = length(q), ring = exp(-pow((dist - rp.z) / 0.035, 2.0));
+        uv -= normalize(q + 1e-5) / vec2(uAspect, 1.0) * ring * rp.w;
+      }
+      vec2 d = uv - 0.5;
       float r = length(d * vec2(uAspect, 1.0)) / (0.5 * uAspect); // 0 가운데, 1 좌우 끝
       vec2 off = d * (0.001 + 0.005 * r * r); // 색수차는 가장자리에서만
-      vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+      vec3 col = vec3(texture2D(tDiffuse, uv + off).r, texture2D(tDiffuse, uv).g, texture2D(tDiffuse, uv - off).b);
       // 렌즈 위 먼지·얼룩 (화면에 고정, 아주 옅게)
       float dust = blob(vec2(0.22, 0.71), 0.035) * 0.16 + blob(vec2(0.74, 0.28), 0.05) * 0.10 + blob(vec2(0.63, 0.82), 0.018) * 0.22
                  + blob(vec2(0.37, 0.18), 0.026) * 0.12 + ring(vec2(0.83, 0.62), 0.045, 0.006) * 0.08 + ring(vec2(0.15, 0.33), 0.03, 0.005) * 0.07;
@@ -143,5 +153,24 @@ export function createScene() {
   };
   const setColorblind = (on: boolean) => { lens.uniforms.uCB.value = on ? 1 : 0; };
 
-  return { scene, camera, composer, setGlow, setAct: bg.setAct, setDefocus, useView, setColorblind };
+  // 굴절 충격파: 세계 좌표에서 시작해 화면에서 퍼진다. 동시에 4개까지 (센 것을 남김)
+  const ripples: { p: THREE.Vector3; t: number; s: number; life: number }[] = [];
+  const proj = new THREE.Vector3();
+  const ripple = (x: number, y: number, z: number, strength: number, life = 0.6) => {
+    if (ripples.length >= 4) { ripples.sort((a, b) => a.s * (1 - a.t / a.life) - b.s * (1 - b.t / b.life)); ripples.shift(); }
+    ripples.push({ p: new THREE.Vector3(x, y, z), t: 0, s: strength, life });
+  };
+  const updateRipples = (dt: number) => {
+    for (let i = ripples.length - 1; i >= 0; i--) if ((ripples[i].t += dt) >= ripples[i].life) ripples.splice(i, 1);
+    const u = lens.uniforms.uRipple.value as THREE.Vector4[];
+    u.forEach((v, i) => {
+      const r = ripples[i];
+      if (!r) return v.set(0, 0, 0, 0);
+      proj.copy(r.p).project(camera);
+      const k = r.t / r.life;
+      v.set(proj.x * 0.5 + 0.5, proj.y * 0.5 + 0.5, 0.03 + k * 0.38, r.s * (1 - k) * (1 - k));
+    });
+  };
+
+  return { scene, camera, composer, setGlow, setAct: bg.setAct, setDefocus, useView, setColorblind, ripple, updateRipples };
 }

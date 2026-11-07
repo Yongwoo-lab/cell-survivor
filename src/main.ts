@@ -1,13 +1,13 @@
 import './ui/fonts.css';
 import './ui/style.css';
-import { createWorld, updateWorld, ENEMIES, type World } from './game/world';
+import { createWorld, updateWorld, clearEvents, ENEMIES, type World } from './game/world';
 import { selectCard } from './game/cards';
 import { addEnemy, kindOf } from './game/spawner';
 import { createBot, BOTS } from './game/bot';
 import { score } from './game/result';
 import { createScene } from './render/scene';
 import { createView } from './render/meshes';
-import { followCamera, setLift, shake } from './render/camera';
+import { followCamera, setLift, shake, setZoom, setLead } from './render/camera';
 import { createColdOpen } from './ui/coldopen';
 import { createHud } from './ui/hud';
 import { createCardPicker } from './ui/cards';
@@ -40,7 +40,7 @@ let bossGlow = 0, coldScale = 1, coldGlow = 0, coldStarted = false;
 let titleT = 0; // 타이틀 등장 연출 진행 (초점이 맞아 가는 정도)
 const BOSS_KIND = ENEMIES.findIndex((e) => e.id === balance.boss.id);
 
-const { scene, camera, composer, setGlow, setAct, setDefocus, useView, setColorblind } = createScene();
+const { scene, camera, composer, setGlow, setAct, setDefocus, useView, setColorblind, ripple, updateRipples } = createScene();
 const titleScene = createTitleScene();
 onBeat(() => titleScene.beat());
 titleScene.onGlare(() => { if (phase === 'title') sfx.growl(); });
@@ -54,7 +54,24 @@ const applySettings = () => {
   setColorblind(settings.cb);
 };
 applySettings();
-const view = createView(scene, camera);
+const view = createView(scene, camera, ripple);
+
+// 히트스톱: 큰 것이 이긴다 (쌓이지 않음). 처치 히트스톱은 0.4초에 한 번까지만.
+const HITSTOP = { kill: 0.03, burst: 0.05, boss: 0.08 };
+let hitstop = 0, killStopCd = 0, prevEvolveN = 0, bossZoomT = 0;
+function feel(w: World, realDt: number) {
+  killStopCd -= realDt;
+  let want = 0;
+  if (w.deaths.length && killStopCd <= 0) { want = HITSTOP.kill; killStopCd = 0.4; }
+  if (w.bursts.length || w.evolveLog.length > prevEvolveN) want = Math.max(want, HITSTOP.burst);
+  if (w.fx.bossHit) want = Math.max(want, HITSTOP.boss);
+  prevEvolveN = w.evolveLog.length;
+  hitstop = Math.max(hitstop, want);
+  // 카메라: 적이 많을수록 최대 15% 줌아웃, 보스 처치 순간 0.4초 줌인
+  if (w.deaths.some((d) => d.kind === BOSS_KIND)) bossZoomT = 0.4;
+  bossZoomT -= realDt;
+  setZoom(bossZoomT > 0 ? -0.22 : Math.min(0.15, w.enemies.count / 300 * 0.15), bossZoomT > 0.35);
+}
 const updateHud = createHud();
 const cardArt = createCardArt();
 const deck = createDeck();
@@ -102,6 +119,10 @@ mutedEl.hidden = !settings.muted;
 
 function startGame() {
   world = createWorld();
+  hitstop = 0;
+  prevEvolveN = 0;
+  setZoom(0, true);
+  setLead(0, 0);
   story.reset();
   phase = 'play';
 }
@@ -283,12 +304,18 @@ function frame(now: number) {
   last = now;
   const dt = paused ? 0 : realDt; // 일시정지: 게임 시간과 화면 효과 모두 멈춤
   if (phase === 'title' && !codex.isOpen && !ranking.boardOpen && (idle += realDt) > balance.attract.idleSeconds) startDemo();
-  if (phase === 'play' && !paused) {
+  if (phase === 'play' && (paused || hitstop > 0)) {
+    if (!paused) hitstop -= realDt; // 히트스톱: 세계가 잠깐 멈춤
+    clearEvents(world); // 멈춘 동안 지난 프레임 연출·소리가 반복되지 않게
+  }
+  else if (phase === 'play' && !paused) {
     const move = {
       x: +held('ArrowRight', 'KeyD') - +held('ArrowLeft', 'KeyA'),
       y: +held('ArrowDown', 'KeyS') - +held('ArrowUp', 'KeyW'),
     };
+    setLead(move.x * 1.6, move.y * 1.6); // 이동 방향으로 약간 앞을 본다
     updateWorld(world, dt, move);
+    feel(world, realDt);
     recordCodex(world);
     if (world.over) {
       phase = 'ending';
@@ -315,7 +342,9 @@ function frame(now: number) {
   if (titleView) { titleScene.update(realDt); titleT = Math.min(1, titleT + realDt / title.entranceSeconds); }
   dev.frame(world);
   soundFrame(world, phase === 'play' || phase === 'cold');
-  view.sync(world, dt, now / 1000);
+  const frozen = phase === 'play' && hitstop > 0;
+  view.sync(world, frozen ? 0 : dt, now / 1000);
+  updateRipples(paused ? 0 : realDt);
   setAct(world.act, dt);
   followCamera(camera, view.player.position, dt);
   // 빛 번짐은 레벨업·진화·보스 처치 순간에만

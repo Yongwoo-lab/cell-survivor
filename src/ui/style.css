@@ -66,6 +66,7 @@ button { font: inherit; color: inherit; }
 #hud .hp i { background: var(--ally); }
 #hud.low .hp i { background: var(--danger); animation: blink 0.6s steps(1) infinite; }
 #hud .xp i { background: var(--gold); height: 1px; top: 0; }
+#hud .xp b { position: absolute; left: 0; top: -1px; height: 3px; width: 0; background: var(--ink); opacity: 0.55; }
 #hud .boss { margin-bottom: 10px; }
 #hud .boss .k { color: var(--danger); }
 #hud .boss .name { flex: 1; font: 900 13px var(--display); letter-spacing: 0.02em; color: var(--danger); }

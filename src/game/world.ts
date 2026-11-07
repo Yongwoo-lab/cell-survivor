@@ -53,7 +53,7 @@ export function createWorld() {
     combo: 0,
     comboT: 0,
     dmgNums: [] as { x: number; y: number; v: number }[], // 이번 프레임 피해 숫자 // 정보 장교에게 말할 거리 (dialogue.officer 키)
-    fx: { shot: 0, hit: 0, pickup: 0, hurt: 0, pill: 0 }, // 이번 프레임 효과음용 횟수
+    fx: { shot: 0, hit: 0, pickup: 0, hurt: 0, pill: 0, bossHit: 0 }, // 이번 프레임 효과음용 횟수
     bossWarn: 0, // >0 이면 보스 등장까지 남은 초 (경고 연출)
     resist: {} as Record<string, number>, // 공격 종류 → 피해 감소율 (보스 내성)
     resistPopCd: 0,
@@ -83,15 +83,20 @@ export function createWorld() {
 }
 export type World = ReturnType<typeof createWorld>;
 
-export function updateWorld(w: World, realDt: number, move: Vec2) {
+// 이번 프레임 이벤트 비우기. 세계가 멈춘 프레임(일시정지·히트스톱)에도 불러야 연출이 반복되지 않는다.
+export function clearEvents(w: World) {
   w.deaths.length = 0;
   w.bursts.length = 0;
   w.resistHits.length = 0;
   w.infections.length = 0;
-  w.fx.shot = w.fx.hit = w.fx.pickup = w.fx.hurt = w.fx.pill = 0;
+  w.fx.shot = w.fx.hit = w.fx.pickup = w.fx.hurt = w.fx.pill = w.fx.bossHit = 0;
   w.rain.length = 0;
   w.noEffectHits.length = 0;
   w.dmgNums.length = 0;
+}
+
+export function updateWorld(w: World, realDt: number, move: Vec2) {
+  clearEvents(w);
   if (w.over || w.choosing) return;
   let dt = realDt;
   if (w.evoSlow > 0) {
@@ -266,6 +271,7 @@ export function updateWorld(w: World, realDt: number, move: Vec2) {
       pl.hp = Math.max(0, pl.hp - def.damage);
       pl.invuln = P.invulnTime;
       w.fx.hurt++;
+      if (e.kind[i] === BOSS) w.fx.bossHit++;
       return true;
     });
     if (pl.hp <= 0) w.over = true;

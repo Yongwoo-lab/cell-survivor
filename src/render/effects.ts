@@ -173,3 +173,81 @@ export function createRain(scene: THREE.Scene) {
     },
   };
 }
+
+const CORPSE_MAX = 400, STAIN_MAX = 256, STAIN_TIME = 1.5;
+type Corpse = { kind: 'half' | 'shrink' | 'melt'; x: number; z: number; y: number; a: number; t: number; life: number; color: THREE.Color; side: number; s: number };
+
+// 죽는 모습: 막대균은 반으로 갈라지고, 바이러스는 쪼그라들고, 감염세포는 녹아내린다. 처치 자리에는 옅은 잔해 얼룩.
+export function createCorpses(scene: THREE.Scene, geo: { half: THREE.BufferGeometry; virus: THREE.BufferGeometry; blob: THREE.BufferGeometry }) {
+  const mk = (g: THREE.BufferGeometry, max: number, mat: THREE.Material) => {
+    const m = new THREE.InstancedMesh(g, mat, max);
+    m.frustumCulled = false;
+    m.count = 0;
+    const c = new THREE.Color();
+    for (let i = 0; i < max; i++) m.setColorAt(i, c);
+    scene.add(m);
+    return m;
+  };
+  const solid = () => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85, depthWrite: false });
+  const meshes = { half: mk(geo.half, CORPSE_MAX, solid()), shrink: mk(geo.virus, CORPSE_MAX, solid()), melt: mk(geo.blob, 64, solid()) };
+  const stainMesh = mk(new THREE.CircleGeometry(1, 28).rotateX(-Math.PI / 2), STAIN_MAX,
+    new THREE.MeshBasicMaterial({ blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
+  const list: Corpse[] = [];
+  const stains: { x: number; z: number; r: number; t: number; color: THREE.Color }[] = [];
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3(), c = new THREE.Color();
+  const UP = new THREE.Vector3(0, 1, 0);
+
+  return {
+    // heading: 막대균이 향하던 방향 (반으로 갈라질 축)
+    add(type: 'half' | 'shrink' | 'melt', x: number, y: number, z: number, color: THREE.Color, heading = 0, size = 1) {
+      if (list.length > CORPSE_MAX - 2) return;
+      const life = type === 'half' ? 0.55 : type === 'shrink' ? 0.32 : 0.7;
+      if (type === 'half') for (const side of [-1, 1]) list.push({ kind: type, x, y, z, a: heading, t: 0, life, color, side, s: size });
+      else list.push({ kind: type, x, y, z, a: heading, t: 0, life, color, side: 1, s: size });
+    },
+    stain(x: number, z: number, r: number, color: THREE.Color) {
+      if (stains.length < STAIN_MAX) stains.push({ x, z, r, t: 0, color });
+    },
+    update(dt: number) {
+      for (let i = list.length - 1; i >= 0; i--) if ((list[i].t += dt) >= list[i].life) list.splice(i, 1);
+      for (let i = stains.length - 1; i >= 0; i--) if ((stains[i].t += dt) >= STAIN_TIME) stains.splice(i, 1);
+      const n = { half: 0, shrink: 0, melt: 0 };
+      for (const o of list) {
+        const k = o.t / o.life, mesh = meshes[o.kind], j = n[o.kind]++;
+        if (o.kind === 'half') {
+          // 축 방향으로 서로 멀어지며 돈다
+          const d = 0.15 + k * 0.9;
+          p.set(o.x + Math.cos(o.a) * d * o.side, o.y, o.z - Math.sin(o.a) * d * o.side);
+          q.setFromAxisAngle(UP, o.a + o.side * k * 1.4);
+          s.setScalar(o.s * (1 - k * 0.5));
+        } else if (o.kind === 'shrink') {
+          p.set(o.x, o.y, o.z);
+          q.setFromAxisAngle(UP, k * 6);
+          s.setScalar(o.s * (1 - k) * (1 - k));
+        } else {
+          // 녹아내림: 납작해지며 퍼지고 가라앉는다
+          p.set(o.x, o.y * (1 - k), o.z);
+          q.identity();
+          s.set(o.s * (1 + k * 0.7), o.s * Math.max(0.05, 1 - k), o.s * (1 + k * 0.7));
+        }
+        mesh.setMatrixAt(j, m.compose(p, q, s));
+        mesh.setColorAt(j, c.copy(o.color).multiplyScalar(1 - k * 0.6));
+      }
+      for (const key of ['half', 'shrink', 'melt'] as const) {
+        meshes[key].count = n[key];
+        meshes[key].instanceMatrix.needsUpdate = true;
+        meshes[key].instanceColor!.needsUpdate = true;
+      }
+      stains.forEach((st, i) => {
+        const k = st.t / STAIN_TIME;
+        p.set(st.x, 0.03, st.z);
+        s.set(st.r * (1 + k * 0.3), 1, st.r * (1 + k * 0.3));
+        stainMesh.setMatrixAt(i, m.compose(p, q.identity(), s));
+        stainMesh.setColorAt(i, c.copy(st.color).multiplyScalar(0.22 * (1 - k)));
+      });
+      stainMesh.count = stains.length;
+      stainMesh.instanceMatrix.needsUpdate = true;
+      stainMesh.instanceColor!.needsUpdate = true;
+    },
+  };
+}
